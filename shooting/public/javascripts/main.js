@@ -2,14 +2,21 @@
 
 import Point from "./common";
 import Ship from "./ship";
+import Ship_shot from "./ship_shot";
 
-let global = {
+export let global = {
 	$canvas: "",
 	context: "",
 	mouse: new Point(),
 	ship: {},
+	ship_shot: {},
 	run: 1,
-	fps: 1000 / 30
+	fps: 1000 / 30,
+	fire: false
+}
+
+const CONSTANT = {
+	CHARA_SHOT_MAX_COUNT: 5
 }
 
 document.addEventListener("DOMContentLoaded", function (){
@@ -24,14 +31,21 @@ document.addEventListener("DOMContentLoaded", function (){
 	global.$canvas.addEventListener("mousemove", mouse_move, true);
 	global.$canvas.addEventListener("mousedown", mouse_down, true);
 
-	// init position
+	/*init*/
+	//position
 	global.mouse.x = global.$canvas.width / 2;
 	global.mouse.y = global.$canvas.height / 2;
 	
-	// init hisp
+	// ship
 	global.ship = new Ship();
 
-	// fps
+	// ship shot
+	global.ship_shot = new Array(CONSTANT["CHARA_SHOT_MAX_COUNT"]);
+	for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){
+		global.ship_shot[i] = new Ship_shot();
+	}
+
+	/*fps*/
 	if(global.run)setInterval(main, global.fps);
 })
 
@@ -39,7 +53,7 @@ function main () {
 	// clear
 	global.context.clearRect(0,0, global.$canvas.width, global.$canvas.height);
 
-	// ship draw
+	/*ship draw*/
 	// start path
 	global.context.beginPath();
 
@@ -58,6 +72,37 @@ function main () {
 
 	// draw
 	global.context.fill();
+
+	/*ship shot draw*/
+	// set
+	if(global.fire){
+		for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){
+			if(!global.ship_shot[i].alive){
+				global.ship_shot[i].set([global.ship.position]);
+				break;
+			}
+		}
+		global.fire = false;
+	}
+	// start path
+	global.context.beginPath();
+
+	for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){
+		if(global.ship_shot[i].alive){
+			global.ship_shot[i].move();
+			global.context.arc(
+				global.ship_shot[i].position.x,
+				global.ship_shot[i].position.y,
+				global.ship_shot[i].size,
+				0,
+				Math.PI * 2,
+				false
+			);
+			global.context.closePath();
+		}
+	}
+
+	global.context.fill();
 }
 
 function mouse_move (e) {
@@ -67,5 +112,5 @@ function mouse_move (e) {
 }
 
 function mouse_down () {
-	console.log("mouse_down");
+	global.fire = true
 }
