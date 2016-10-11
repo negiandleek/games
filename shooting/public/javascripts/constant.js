@@ -1,0 +1,9 @@
+export const CONSTANT = {
+	CHARA_SHOT_MAX_COUNT: 10,
+	CHARA_COLOR: "rgba(0, 0, 255, 0.75)",
+	CHARA_SHOT_COLOR: "rgba(0 ,255 ,0 , 0.75)",
+	ENEMY_MAX_COUNT: 15,
+	ENEMY_SHOT_MAX_COUNT: 100,
+	ENEMY_COLOR: "rgba(255, 0, 0, 0.75)",
+	ENEMY_SHOT_COLOR: "rgba(255, 0, 255, 0.75)"
+}

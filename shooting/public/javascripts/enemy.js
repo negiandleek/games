@@ -1,5 +1,5 @@
 import Point from "./common";
-import {global} from "./main";
+import {global} from "./global";
 
 class Enemy{
 	constructor(){

@@ -1,5 +1,5 @@
 import Point from "./common";
-import {global} from "./main.js";
+import {global} from "./global.js";
 class Enemy_shot{
 	constructor(){
 		this.position = new Point();

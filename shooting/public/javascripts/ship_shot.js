@@ -1,5 +1,5 @@
-import {global} from "./main";
 import Point from "./common";
+import {global} from "./global";
 
 class Ship_shot{
 	constructor(size){

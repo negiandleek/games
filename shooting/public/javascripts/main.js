@@ -1,42 +1,8 @@
 "use strict"
 
-import Point from "./common";
-import Ship from "./ship";
-import Ship_shot from "./ship_shot";
-import Enemy from "./enemy";
-import Enemy_shot from "./enemy_shot";
-
-export let global = {
-	$canvas: "",
-	context: "",
-	counter: 0,
-	mouse: new Point(),
-	ship: {},
-	ship_shot: {},
-	run: true,
-	fps: 1000 / 30,
-	fire: false,
-	enemy_shot: {},
-	text:{
-		score: {},
-		info: {
-			align: "center ,sans-serif",
-			font: "30px 'ＭＳ ゴシック'",
-			style: "rgb(0,0,0)",
-			position: {}
-		}
-	}
-}
-
-const CONSTANT = {
-	CHARA_SHOT_MAX_COUNT: 5,
-	CHARA_COLOR: "rgba(0, 0, 255, 0.75)",
-	CHARA_SHOT_COLOR: "rgba(0 ,255 ,0 , 0.75)",
-	ENEMY_MAX_COUNT: 15,
-	ENEMY_SHOT_MAX_COUNT: 100,
-	ENEMY_COLOR: "rgba(255, 0, 0, 0.75)",
-	ENEMY_SHOT_COLOR: "rgba(255, 0, 255, 0.75)"
-}
+import {init} from "./init";
+import {global} from "./global";
+import {CONSTANT} from "./constant";
 
 document.addEventListener("DOMContentLoaded", function (){
 	// canvas init
@@ -49,41 +15,14 @@ document.addEventListener("DOMContentLoaded", function (){
 	// event
 	global.$canvas.addEventListener("mousemove", mouse_move, true);
 	global.$canvas.addEventListener("mousedown", mouse_down, true);
+	global.$canvas.addEventListener("mouseup", mouse_up, true);
+	document.addEventListener("keydown", key_down, true);
 
 	/*init*/
 	//position
-	(function () {
-		let x = global.$canvas.width / 2;
-		let y = global.$canvas.height / 2;
-		global.mouse.x = x
-		global.mouse.y = y
-		global.text.info.position.x = x;
-		global.text.info.position.y = y;
-	})();
-	
-	// ship
-	global.ship = new Ship();
+	init();
 
-	// ship shot
-	global.ship_shot = new Array(CONSTANT["CHARA_SHOT_MAX_COUNT"]);
-	for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){
-		global.ship_shot[i] = new Ship_shot();
-	}
-
-	// enemy
-	global.enemy = new Array(CONSTANT["ENEMY_MAX_COUNT"]);
-	for(let i = 0; i < CONSTANT["ENEMY_MAX_COUNT"]; i += 1){
-		global.enemy[i] = new Enemy();
-	}
-
-	// enemy shot
-	let enemy_shot = new Array(CONSTANT["ENEMY_SHOT_MAX_COUNT"]);
-	for(let i = 0; i < CONSTANT["ENEMY_SHOT_MAX_COUNT"]; i += 1){
-		global.enemy_shot[i] = new Enemy_shot();
-	}
-
-	/*fps*/
-	main();
+	game_state();
 })
 
 function main () {
@@ -188,7 +127,7 @@ function main () {
 						false
 					)
 					// set shot info
-					if(global.enemy[i].param % 15 === 0){
+					if(global.enemy[i].param % 30 === 0){
 						for(let j = 0; j < CONSTANT["ENEMY_SHOT_MAX_COUNT"]; j += 1){
 							if(!global.enemy_shot[j].alive){
 								let p = global.enemy[i].position.distance(global.ship.position);
@@ -234,7 +173,7 @@ function main () {
 						let p = global.ship_shot[i].position.distance(global.enemy[j].position);
 						if(p.length() < global.enemy[j].size){
 							global.enemy[j].alive = false;
-							global.ship_shot[i] = false;
+							global.ship_shot[i].alive = false;
 
 							break;
 						}
@@ -242,12 +181,13 @@ function main () {
 				}
 			}
 
+			// enemy shot and ship
 			for(let i = 0; i < CONSTANT.ENEMY_SHOT_MAX_COUNT; i += 1){
 				if(global.enemy_shot[i].alive){
 					let p = global.ship.position.distance(global.enemy_shot[i].position);
 					if(p.length() < global.ship.size){
-						global.run = false;
-						display_text(global.text.info, "GAME OVER!!");
+						game_state(false);
+
 						break;
 					}
 				}
@@ -256,7 +196,22 @@ function main () {
 	if(global.run){
 		setTimeout(main, global.fps);
 	}
+}
 
+function game_state (bool) {
+	global.run = typeof bool === "undefined"? false: bool;
+
+	if(global.run){
+		global.counter = 0;
+		init();
+		main();
+	}
+
+	if(!global.run && global.counter !== 0){
+		display_text(global.text.info, "GAME OVER!!");
+	}else if(!global.run && global.counter === 0){
+		display_text(global.text.info, "START");
+	}
 }
 
 function mouse_move (e) {
@@ -268,7 +223,24 @@ function mouse_move (e) {
 
 function mouse_down () {
 	if(global.counter < 80) return;
-	global.fire = true
+	
+	global.fire = true;
+
+	global.click = setInterval(()=>{
+		global.fire = true;
+	},  250);
+}
+
+function mouse_up () {
+	clearInterval(global.click);
+}
+
+// start or finish or retry
+function key_down (e) {
+	let key = e.keyCode;
+	if(key === 13 && !global.run){
+		game_state(true);
+	}
 }
 
 function display_text (obj,text) {
