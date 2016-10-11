@@ -1,6 +1,6 @@
 import Ship from "./ship";
 import Ship_shot from "./ship_shot";
-import Enemy from "./enemy";
+import {Enemy} from "./enemy";
 import Enemy_shot from "./enemy_shot";
 import {global} from "./global";
 import {CONSTANT} from "./constant";

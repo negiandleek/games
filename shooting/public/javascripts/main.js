@@ -98,15 +98,19 @@ function main () {
 			if(global.counter % 50 === 0){
 				for(let i = 0; i < CONSTANT["ENEMY_MAX_COUNT"]; i += 1){
 					if(!global.enemy[i]["alive"]){
-						let j = (global.counter % 100) / 50;
-
 						// type
+						let j = (global.counter % 100) / 50;
 						let enemy_size = 15;
 						let p = {};
-						p.x = global.$canvas.width / 3 * 2;
+						p.x = global.$canvas.width;
 						p.y = -enemy_size + (global.$canvas.height + enemy_size * 2) * j;
 
-						global.enemy[i].set([p, enemy_size, j]);
+						global.enemy[i].set({
+							position: p,
+							size: enemy_size,
+							type: j,
+							speed: 5
+						});
 						break;
 					}
 				}
