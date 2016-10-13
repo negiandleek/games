@@ -20,5 +20,8 @@ export let global = {
 			style: "rgb(0,0,0)",
 			position: {}
 		}
-	}
+	},
+	csv: [],
+	icsv: 0,
+	item: []
 }

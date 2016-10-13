@@ -89,10 +89,11 @@ gulp.task('mv:html', (cb) => {
         .pipe(gulp.dest(path.static))
 })
 
-gulp.task('publish', (cb) => {
-    return gulp.src(path.static + '/**/*')
-            .pipe($.plumber())
-            .pipe(gulp.dest(path.static))
+//CSV
+gulp.task('mv:csv', (cb) => {
+    return gulp.src(path.public + '{,**/}*.csv')
+        .pipe($.plumber())
+        .pipe(gulp.dest(path.static))
 })
 
 gulp.task('enable:watch-mode', (cb) => {
@@ -131,7 +132,7 @@ gulp.task('default', (cb) => {
     seq('clean:tmpdir',
         'enable:debug-mode',
         'enable:watch-mode',
-        ['mv:html','babel'],
+        ['mv:html','babel','mv:csv'],
         'build:js',
         'watch',
         'clean:tmpdir',

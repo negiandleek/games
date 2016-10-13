@@ -59,9 +59,9 @@ function move_enemy1 (self) {
 	if(self.param < 50){
 		move_center(self);
 	}else{
-		self.position.x -= self.speed;
+		move_upper_left(self);
 	}
-	if(self.position.x < - self.size){
+	if(self.position.x < -self.size  || self.position.y < -self.size){
 		self.alive = false;
 	}
 }
@@ -70,13 +70,31 @@ function move_enemy2 (self) {
 	if(self.param < 50){
 		move_center(self);
 	}else{
-		self.position.x -= self.speed;
+		move_lower_left(self)
 	}
-	if(self.position.x < - self.size){
+	if(self.position.x < -self.size  || self.position.y < -self.size){
 		self.alive = false;
 	}
 }
 
+
+
+function move_center (self) {
+	let {normalize_x, normalize_y} = center_vector(self);
+	self.position.x = self.position.x + normalize_x * self.speed;
+	self.position.y = self.position.y + normalize_y * self.speed;
+}
+
+function move_upper_left (self) {
+	let {normalize_x, normalize_y} = left_end_vector(self, "up");
+	self.position.x = self.position.x + normalize_x * self.speed;
+	self.position.y = self.position.y + normalize_y * self.speed;
+}
+function move_lower_left (self) {
+	let {normalize_x, normalize_y} = left_end_vector(self, "down");
+	self.position.x = self.position.x + normalize_x * self.speed;
+	self.position.y = self.position.y + normalize_y * self.speed;
+}
 
 function center_vector (self) {
 	let center_x = global.$canvas.width / 2;
@@ -91,18 +109,33 @@ function center_vector (self) {
 	return {normalize_x,normalize_y}
 }
 
-function move_center (self) {
-	let {normalize_x, normalize_y} = center_vector(self);
-	self.position.x = self.position.x + normalize_x * self.speed;
-	self.position.y = self.position.y + normalize_y * self.speed;
-}
-
 function left_end_vector(self,type){
+	let distance_x;
+	let distance_y;
+	let length;
+	let n;
+	let normalize_x;
+	let normalize_y;
+	let diameter = self.size * 2;
+	if(type === "up"){
+		let left_upper_left_x = global.$canvas.offsetLeft - diameter;
+		let left_upper_left_y = global.$canvas.offsetTop - diameter;
+		distance_x = left_upper_left_x - self.position.x;
+		distance_y = left_upper_left_y - self.position.y;
+		length = Math.sqrt(distance_x * distance_x + distance_y * distance_y);
+		n = 1 / length;
+		normalize_x = distance_x * n;
+		normalize_y = distance_y * n;
+	}else if(type === "down"){
+		let left_lower_left_x = global.$canvas.offsetLeft - diameter;
+		let left_lower_left_y = global.$canvas.offsetHeight + global.$canvas.offsetTop + diameter;
+		distance_x = left_lower_left_x - self.position.x;
+		distance_y = left_lower_left_y - self.position.y;
+		length = Math.sqrt(distance_x * distance_x + distance_y * distance_y);
+		n = 1 / length;
+		normalize_x = distance_x * n;
+		normalize_y = distance_y * n;
+	}
 
-}
-function move_upper_left (self) {
-	
-}
-function move_lower_left (self) {
-
+	return {normalize_x, normalize_y}
 }

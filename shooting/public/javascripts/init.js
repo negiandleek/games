@@ -12,10 +12,15 @@ export function init() {
 	global.mouse.y = y
 	global.text.info.position.x = x;
 	global.text.info.position.y = y;
-
+	global.icsv = 0;
+	global.item = [];
 	// ship
 	global.ship = new Ship();
-
+	global.ship.set({
+		life: 2,
+		size: 15,
+		firing_speed: 250
+	})
 	// ship shot
 	global.ship_shot = new Array(CONSTANT["CHARA_SHOT_MAX_COUNT"]);
 	for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){

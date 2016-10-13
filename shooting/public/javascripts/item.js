@@ -1,14 +1,12 @@
 import Point from "./common";
 
-class Ship{
+export class Item{
 	constructor(){
 		this.position = new Point();
+		this.type = 1;
 		this.size = 0;
-		this.life = 0;
-		this.max_life = 3
-		this.firing_speed = 0;
-		this.invincible = false;
-		this.tmp = 0;
+		this.speed = 0;
+		this.alive = false;
 	}
 	set(obj){
 		for(let prop in obj){
@@ -40,27 +38,12 @@ class Ship{
 				this[prop] = variable;
 			}
 		}
+		this.alive = true;
 	}
-	change_state(type){
-		switch (type){
-			// hp down
-			case 0:
-				break;
-			// hp up
-			case 1:
-				this.life + 1 <= global.ship.max_life ? 
-					global.ship.life + 1:
-					global.ship.life
-				break;
-			// attack evolution 
-			case 2:
-				break;
+	move(){
+		this.position.x = this.position.x - this.speed;
+		if(this.position.x < -this.size){
+			this.alive = false;
 		}
-		this.invincible = true;
-		setTimeout(()=>{
-			this.invincible = false
-		},1000)
 	}
 }
-
-module.exports = Ship;

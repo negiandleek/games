@@ -3,6 +3,14 @@
 import {init} from "./init";
 import {global} from "./global";
 import {CONSTANT} from "./constant";
+import {Item} from "./item";
+import {getEnemyCSV} from "./csv";
+
+getEnemyCSV();
+
+export function get_csv_data (result) {
+	global.csv_data = result;
+}
 
 document.addEventListener("DOMContentLoaded", function (){
 	// canvas init
@@ -35,8 +43,12 @@ function main () {
 	global.context.beginPath();
 
 	// ship position
-	global.ship.position.x = global.mouse.x;
-	global.ship.position.y = global.mouse.y;
+	global.ship.set({
+		position: {
+			x: global.mouse.x,
+			y: global.mouse.y
+		}
+	});
 
 	//proparty
 	global.context.arc(
@@ -48,7 +60,19 @@ function main () {
 	);
 
 	// draw
-	global.context.fillStyle = CONSTANT.CHARA_COLOR;
+	if(global.ship.invincible){
+		let diff = global.counter - global.ship.tmp;
+		if(diff <= 6){
+			global.context.fillStyle = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+		}else if(diff >= 7 && diff < 10){
+			global.context.fillStyle = CONSTANT.CHARA_SHOT_COLOR_MODIFY2;
+		}else{
+			global.ship.tmp = global.counter;
+			global.context.fillStyle = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+		}
+	}else{
+		global.context.fillStyle = CONSTANT.CHARA_COLOR;
+	}
 	global.context.fill();
 
 	/*ship shot draw*/
@@ -95,11 +119,11 @@ function main () {
 
 		default:
 			// set
-			if(global.counter % 50 === 0){
+			if(global.counter === global.csv_data[global.icsv][0]){
 				for(let i = 0; i < CONSTANT["ENEMY_MAX_COUNT"]; i += 1){
 					if(!global.enemy[i]["alive"]){
 						// type
-						let j = (global.counter % 100) / 50;
+						let j = global.csv_data[global.icsv][1];
 						let enemy_size = 15;
 						let p = {};
 						p.x = global.$canvas.width;
@@ -109,8 +133,9 @@ function main () {
 							position: p,
 							size: enemy_size,
 							type: j,
-							speed: 5
+							speed: 3
 						});
+						global.icsv = global.icsv + 1;
 						break;
 					}
 				}
@@ -175,11 +200,57 @@ function main () {
 					for(let j = 0; j < CONSTANT.ENEMY_MAX_COUNT; j += 1){
 						// enemyとship shotの距離を計算
 						let p = global.ship_shot[i].position.distance(global.enemy[j].position);
-						if(p.length() < global.enemy[j].size){
+						if(p.length() < global.enemy[j].size && global.enemy[j].alive){
 							global.enemy[j].alive = false;
 							global.ship_shot[i].alive = false;
-
+							// random 1/100
+							let __item = new Item();
+							__item.set({
+								type: 1,
+								size: 5,
+								speed: 3,
+								position: global.enemy[j].position
+							});
+							global.item.push(__item);
 							break;
+						}
+					}
+				}
+			}
+
+			/*item*/
+			global.context.beginPath();
+			if(global.item.length !== 0){
+				let tmp = [];
+				for(let i = 0; i < global.item.length; i+=1){
+					global.item[i].move();
+					global.context.arc(
+						global.item[i].position.x,
+						global.item[i].position.y,
+						global.item[i].size,
+						0,
+						Math.PI * 2,
+						false
+					);
+					if(global.item[i].alive === true){
+						tmp.push(global.item[i]);
+					}
+					global.context.closePath();
+				}
+				global.item = tmp;
+			}
+
+			global.context.fillStyle = CONSTANT.ITEM_COLOR1;
+			global.context.fill();
+
+			// ship and item;
+			if(global.item.length !== 0){
+				for(let i = 0; i < global.item.length; i+=1){
+					if(global.item[i].alive === true){
+						let p = global.ship.position.distance(global.item[i].position);
+						if(p.length() < global.item[i].size){
+							global.item[i].alive = false;
+							global.ship.change_state(1);
 						}
 					}
 				}
@@ -189,8 +260,14 @@ function main () {
 			for(let i = 0; i < CONSTANT.ENEMY_SHOT_MAX_COUNT; i += 1){
 				if(global.enemy_shot[i].alive){
 					let p = global.ship.position.distance(global.enemy_shot[i].position);
-					if(p.length() < global.ship.size){
-						game_state(false);
+					if(p.length() < global.ship.size && !global.ship.invincible){
+						let life = global.ship.life - 1;
+						if(life <= 0){
+							game_state(false);
+						}else{
+							global.ship.set({life: life});
+							global.ship.change_state(0);
+						}
 
 						break;
 					}
@@ -226,13 +303,17 @@ function mouse_move (e) {
 }
 
 function mouse_down () {
-	if(global.counter < 80) return;
+	if(global.counter < 80 || global.ship.invincible) {
+		return;
+	}
 	
 	global.fire = true;
 
 	global.click = setInterval(()=>{
-		global.fire = true;
-	},  250);
+		if(!global.ship.invincible){
+			global.fire = true;
+		}
+	},  global.ship.firing_speed);
 }
 
 function mouse_up () {
