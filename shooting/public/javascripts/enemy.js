@@ -51,6 +51,12 @@ export class Enemy{
 			case 1:
 				move_enemy2(this);
 				break;
+			case 2:
+				move_enemy3(this);
+				break;
+			case 3:
+				move_enemy4(this);
+				break;
 		}
 	}
 }
@@ -77,7 +83,21 @@ function move_enemy2 (self) {
 	}
 }
 
+function move_enemy3(self){
+	move_wave(self,1);
 
+	if(self.position.x < -self.size  || self.position.y < -self.size){
+		self.alive = false;
+	}
+}
+
+function move_enemy4(self){
+	move_wave(self,-1);
+
+	if(self.position.x < -self.size  || self.position.y < -self.size){
+		self.alive = false;
+	}
+}
 
 function move_center (self) {
 	let {normalize_x, normalize_y} = center_vector(self);
@@ -94,6 +114,13 @@ function move_lower_left (self) {
 	let {normalize_x, normalize_y} = left_end_vector(self, "down");
 	self.position.x = self.position.x + normalize_x * self.speed;
 	self.position.y = self.position.y + normalize_y * self.speed;
+}
+
+function move_wave(self, type){
+	let center_y = global.$canvas.height / 2;
+	let range = 125;
+	self.position.y = center_y + Math.sin(self.param / 30) * range * type;
+	self.position.x = self.position.x - self.speed;
 }
 
 function center_vector (self) {

@@ -203,15 +203,17 @@ function main () {
 						if(p.length() < global.enemy[j].size && global.enemy[j].alive){
 							global.enemy[j].alive = false;
 							global.ship_shot[i].alive = false;
-							// random 1/100
-							let __item = new Item();
-							__item.set({
-								type: 1,
-								size: 5,
-								speed: 3,
-								position: global.enemy[j].position
-							});
-							global.item.push(__item);
+							let r = Math.floor(Math.random() * 100);
+							if(r < 1){
+								let __item = new Item();
+								__item.set({
+									type: 1,
+									size: 5,
+									speed: 3,
+									position: global.enemy[j].position
+								});
+								global.item.push(__item);
+							}
 							break;
 						}
 					}
@@ -263,7 +265,7 @@ function main () {
 					if(p.length() < global.ship.size && !global.ship.invincible){
 						let life = global.ship.life - 1;
 						if(life <= 0){
-							game_state(false);
+							// game_state(false);
 						}else{
 							global.ship.set({life: life});
 							global.ship.change_state(0);
