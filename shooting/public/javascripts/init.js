@@ -19,7 +19,7 @@ export function init() {
 	global.ship.set({
 		life: 2,
 		size: 15,
-		firing_speed: 250
+		firing_speed: 300
 	})
 	// ship shot
 	global.ship_shot = new Array(CONSTANT["CHARA_SHOT_MAX_COUNT"]);

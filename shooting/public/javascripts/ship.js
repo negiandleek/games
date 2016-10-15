@@ -7,6 +7,7 @@ class Ship{
 		this.life = 0;
 		this.max_life = 3
 		this.firing_speed = 0;
+		this.max_firing_speed = 0;
 		this.invincible = false;
 		this.tmp = 0;
 	}
@@ -44,22 +45,28 @@ class Ship{
 	change_state(type){
 		switch (type){
 			// hp down
-			case 0:
+			case "DAMAGE":
+				this.invincible_state(type, 1000);
 				break;
 			// hp up
-			case 1:
-				this.life + 1 <= global.ship.max_life ? 
-					global.ship.life + 1:
-					global.ship.life
+			case "HP":
+				let _life = this.life + 1;
+				this.life = _life <= this.max_life ? _life: this.life;
+				this.invincible_state(type, 750);
 				break;
 			// attack evolution 
-			case 2:
+			case "FIRING":
+				let _firing_speed = this.firing_speed - 100;
+				this.firing_speed = _firing_speed >= 100 ? _firing_speed: this.firing_speed;
+				this.invincible_state(type, 750);
 				break;
 		}
-		this.invincible = true;
+	}
+	invincible_state(item_type,time){
+		this.invincible = item_type;
 		setTimeout(()=>{
 			this.invincible = false
-		},1000)
+		},time)
 	}
 }
 

@@ -3,7 +3,8 @@ import Point from "./common";
 export class Item{
 	constructor(){
 		this.position = new Point();
-		this.type = 1;
+		// hp,power
+		this.type = "";
 		this.size = 0;
 		this.speed = 0;
 		this.alive = false;

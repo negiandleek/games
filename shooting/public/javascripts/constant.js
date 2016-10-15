@@ -8,5 +8,6 @@ export const CONSTANT = {
 	ENEMY_SHOT_MAX_COUNT: 100,
 	ENEMY_COLOR: "rgba(255, 0, 0, 0.75)",
 	ENEMY_SHOT_COLOR: "rgba(255, 0, 255, 0.75)",
-	ITEM_COLOR1: "rgba(0, 0, 0, 0.75)"
+	ITEM_COLOR1: "yellow",
+	ITEM_COLOR2: "orange"
 }

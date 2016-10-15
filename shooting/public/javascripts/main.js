@@ -62,13 +62,28 @@ function main () {
 	// draw
 	if(global.ship.invincible){
 		let diff = global.counter - global.ship.tmp;
+		let type = global.ship.invincible;
+		let color = [];
+
+
+		if(type === "DAMAGE"){
+			color[0] = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+			color[1] = CONSTANT.CHARA_SHOT_COLOR_MODIFY2;
+		}else if(type === "HP"){
+			color[0] = CONSTANT.ITEM_COLOR1;
+			color[1] = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+		}else if(type === "FIRING"){
+			color[0] = CONSTANT.ITEM_COLOR2;
+			color[1] = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+		}
+
 		if(diff <= 6){
-			global.context.fillStyle = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+			global.context.fillStyle = color[0];
 		}else if(diff >= 7 && diff < 10){
-			global.context.fillStyle = CONSTANT.CHARA_SHOT_COLOR_MODIFY2;
+			global.context.fillStyle = color[1];
 		}else{
 			global.ship.tmp = global.counter;
-			global.context.fillStyle = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+			global.context.fillStyle = color[0];
 		}
 	}else{
 		global.context.fillStyle = CONSTANT.CHARA_COLOR;
@@ -156,7 +171,7 @@ function main () {
 						false
 					)
 					// set shot info
-					if(global.enemy[i].param % 30 === 0){
+					if(global.enemy[i].param % 50 === 0){
 						for(let j = 0; j < CONSTANT["ENEMY_SHOT_MAX_COUNT"]; j += 1){
 							if(!global.enemy_shot[j].alive){
 								let p = global.enemy[i].position.distance(global.ship.position);
@@ -204,10 +219,20 @@ function main () {
 							global.enemy[j].alive = false;
 							global.ship_shot[i].alive = false;
 							let r = Math.floor(Math.random() * 100);
-							if(r < 1){
+							if(r <= 50){
 								let __item = new Item();
 								__item.set({
-									type: 1,
+									type: "HP",
+									size: 5,
+									speed: 3,
+									position: global.enemy[j].position
+								});
+								global.item.push(__item);
+							}
+							if(r >= 51 && r <= 100){
+								let __item = new Item();
+								__item.set({
+									type: "FIRING",
 									size: 5,
 									speed: 3,
 									position: global.enemy[j].position
@@ -221,10 +246,10 @@ function main () {
 			}
 
 			/*item*/
-			global.context.beginPath();
 			if(global.item.length !== 0){
 				let tmp = [];
 				for(let i = 0; i < global.item.length; i+=1){
+					global.context.beginPath();
 					global.item[i].move();
 					global.context.arc(
 						global.item[i].position.x,
@@ -234,25 +259,30 @@ function main () {
 						Math.PI * 2,
 						false
 					);
+
 					if(global.item[i].alive === true){
 						tmp.push(global.item[i]);
 					}
-					global.context.closePath();
+					switch (global.item[i].type){
+						case "HP":
+							global.context.fillStyle = CONSTANT.ITEM_COLOR1;
+							break;
+						case "FIRING":
+							global.context.fillStyle = CONSTANT.ITEM_COLOR2;
+							break;
+					}
+					global.context.fill();
 				}
 				global.item = tmp;
 			}
-
-			global.context.fillStyle = CONSTANT.ITEM_COLOR1;
-			global.context.fill();
-
 			// ship and item;
-			if(global.item.length !== 0){
+			if(global.item.length !== 0 && !global.ship.invincible){
 				for(let i = 0; i < global.item.length; i+=1){
 					if(global.item[i].alive === true){
-						let p = global.ship.position.distance(global.item[i].position);
-						if(p.length() < global.item[i].size){
+						let p = global.item[i].position.distance(global.ship.position);
+						if(p.length() <= global.ship.size){
 							global.item[i].alive = false;
-							global.ship.change_state(1);
+							global.ship.change_state(global.item[i].type);
 						}
 					}
 				}
@@ -265,16 +295,19 @@ function main () {
 					if(p.length() < global.ship.size && !global.ship.invincible){
 						let life = global.ship.life - 1;
 						if(life <= 0){
-							// game_state(false);
+							game_state(false);
 						}else{
 							global.ship.set({life: life});
-							global.ship.change_state(0);
+							global.ship.change_state("DAMAGE");
 						}
 
 						break;
 					}
 				}
 			}
+
+			display_ship_hp();
+			display_ship_firing_speed();
 	}
 	if(global.run){
 		setTimeout(main, global.fps);
@@ -305,11 +338,17 @@ function mouse_move (e) {
 }
 
 function mouse_down () {
+	let now_date = new Date().getTime();
+	let diff = global.last_time - global.ship.firing_speed;
+
 	if(global.counter < 80 || global.ship.invincible) {
 		return;
 	}
 	
-	global.fire = true;
+	if((global.last_time + global.ship.firing_speed <= now_date)){
+		global.fire = true;
+		global.last_time = now_date;
+	}
 
 	global.click = setInterval(()=>{
 		if(!global.ship.invincible){
@@ -352,4 +391,31 @@ function display_text (obj,text) {
 		}
 	}
 	global.context.fillText(text, x, y);
+}
+
+function display_ship_hp(){
+	// let hp_list = new Array(global.ship.life);
+	let hp_list = new Array(global.ship.life);
+	let w = 15;
+	let h = 30;
+	let x = global.$canvas.offsetLeft + 5;
+	let y = global.$canvas.offsetHeight - 70;
+	for(let i = 0; i < hp_list.length; i += 1){
+		let _x = 20 * i + 5;
+		global.context.fillStyle = CONSTANT.ITEM_COLOR1;
+		global.context.fillRect(_x, y, w, h);
+	}
+}
+
+function display_ship_firing_speed(){
+	let firing_speed_list = new Array(global.ship.firing_speed * -(1 / 100) + 4);
+	let w = 15;
+	let h = 30;
+	let x = global.$canvas.offsetLeft + 5;
+	let y = global.$canvas.offsetHeight - 35;
+	for(let i = 0; i < firing_speed_list.length; i += 1){
+		let _x = 20 * i + 5;
+		global.context.fillStyle = CONSTANT.ITEM_COLOR2;
+		global.context.fillRect(_x, y, w, h);
+	}
 }

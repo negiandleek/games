@@ -23,5 +23,6 @@ export let global = {
 	},
 	csv: [],
 	icsv: 0,
-	item: []
+	item: [],
+	last_time: new Date().getTime()
 }
