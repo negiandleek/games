@@ -13,11 +13,18 @@ export function getEnemyCSV () {
 function convertCSVtoArray (str) {
 	let result = [];
 	let split_str = str.split("\n");
-
+	let escape_str;
 	for(let i = 1; i < split_str.length; i += 1){
-		result[i - 1] = split_str[i].split(",");
+		let split_arr = split_str[i].split(",");
+		escape_str = escape(split_arr[1]);
+		
+		if(!split_arr[0] && escape_str === "%0D") continue;
+
+		result.push(split_arr);
+
 		for(let j = 0; j < 2; j += 1){
-			result[i - 1][j] = result[i - 1][j] - 0;
+			let index = result.length - 1;
+			result[index][j] = result[index][j] - 0;
 		}
 
 	}

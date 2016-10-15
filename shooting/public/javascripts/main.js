@@ -133,8 +133,29 @@ function main () {
 			break;
 
 		default:
+			if(global.game_start){
+				global.init_time = new Date().getTime() + 1000;
+				global.game_start = false;
+			}
+			// limit time
+			let now = new Date().getTime();
+			if(global.remaining_time){
+				global.remaining_time = now - global.init_time;
+				let csv_length = global.csv_data.length - 1;
+				display_remaining_time();
+
+				if(global.remaining_time >= global.csv_data[csv_length][0]){
+					game_state(false);
+				}
+			}else{
+				global.remaining_time = now - global.init_time;
+			}
+
 			// set
-			if(global.counter === global.csv_data[global.icsv][0]){
+			if(global.counter >= global.csv_data[global.icsv][0] &&
+				global.csv_data[global.icsv][1] !== 999 &&
+				global.csv_data[global.icsv][1] <= 99 ){
+				
 				for(let i = 0; i < CONSTANT["ENEMY_MAX_COUNT"]; i += 1){
 					if(!global.enemy[i]["alive"]){
 						// type
@@ -154,9 +175,32 @@ function main () {
 						break;
 					}
 				}
-			}
+			}else if(global.counter >= global.csv_data[global.icsv][0] &&
+				global.csv_data[global.icsv][1] !== 999 &&
+				global.csv_data[global.icsv][1] >= 100){
+				
+				let p = {
+					x: 580,
+					y: global.$canvas.height / 2
+				};
+				global.boss.set({
+					position: p,
+					size: 50,
+					life: 30,
+					speed: 5
+				});
 
-			// draw
+				for(let i = 0; i < CONSTANT.BOSS_HENCHMAN_COUNT; i+=1){
+					let j = 360 / CONSTANT.BOSS_HENCHMAN_COUNT;
+					global.henchman[i].set(global.boss, {
+						size: 15,
+						life: 5,
+						param: i * j
+					});
+				}
+				global.icsv = global.icsv + 1;
+			}
+			// draw enemy
 			global.context.beginPath();
 
 			for(let i = 0; i < CONSTANT["ENEMY_MAX_COUNT"]; i += 1){
@@ -186,6 +230,56 @@ function main () {
 				global.context.closePath();
 			}
 			global.context.fillStyle = CONSTANT.ENEMY_COLOR;
+			global.context.fill();
+
+			// draw boss
+			global.context.beginPath();
+			if(global.boss.alive){
+				global.boss.move();
+				global.context.arc(
+					global.boss.position.x,
+					global.boss.position.y,
+					global.boss.size,
+					0, 
+					Math.PI * 2,
+					false
+				);
+				global.context.closePath();
+			}
+			global.context.fillStyle = CONSTANT.BOSS_COLOR;
+			global.context.fill();
+			
+			// draw henchman
+			global.context.beginPath();
+			
+			for(let i = 0; i < 	CONSTANT.BOSS_HENCHMAN_COUNT; i+=1){
+				if(global.henchman[i].alive && global.boss.alive){
+					global.henchman[i].move();
+					
+					global.context.arc(
+						global.henchman[i].position.x,
+						global.henchman[i].position.y,
+						global.henchman[i].size,
+						0, Math.PI * 2, false
+					);
+					
+					if(global.henchman[i].param % 25 === 0){
+						for(let j = 0; j < CONSTANT.ENEMY_SHOT_MAX_COUNT; j+=1){
+							if(!global.enemy_shot[j].alive){
+								let p = global.henchman[i].position.distance(global.ship.position);
+								p.normalize();
+								global.enemy_shot[j].set([global.henchman[i].position, p, 5, 5]);
+								
+								break;
+							}
+						}
+					}
+					
+					global.context.closePath();
+				}
+			}
+
+			global.context.fillStyle = 	CONSTANT.BOSS_HENCHMAN_COLOR;
 			global.context.fill();
 
 			/*shot*/
@@ -219,7 +313,7 @@ function main () {
 							global.enemy[j].alive = false;
 							global.ship_shot[i].alive = false;
 							let r = Math.floor(Math.random() * 100);
-							if(r <= 50){
+							if(r === 1){
 								let __item = new Item();
 								__item.set({
 									type: "HP",
@@ -229,7 +323,7 @@ function main () {
 								});
 								global.item.push(__item);
 							}
-							if(r >= 51 && r <= 100){
+							if(r === 2){
 								let __item = new Item();
 								__item.set({
 									type: "FIRING",
@@ -240,6 +334,35 @@ function main () {
 								global.item.push(__item);
 							}
 							break;
+						}
+					}
+					for(let j = 0; j < CONSTANT.BOSS_HENCHMAN_COUNT; j += 1){
+						if(global.henchman[j].alive){
+							let p = global.henchman[j].position.distance(global.ship_shot[i].position);
+							if(p.length() < global.henchman[j].size){
+								global.henchman[j].life -= 1;
+								global.ship_shot[i].alive = false;
+
+								if(global.henchman[j].life < 0){
+									global.henchman[j].alive = false;
+								}
+
+								break;
+							}
+						}
+					}
+					if(global.boss.alive){
+						let p = global.boss.position.distance(global.ship_shot[i].position);
+						if(p.length() < global.boss.size){
+							global.boss.life = global.boss.life - 1;
+							
+							global.ship_shot[i].alive = false;
+							
+							if(global.boss.life <= 0){
+								global.boss.alive = false;
+								global.clear = true;
+								game_state(false),500;
+							}
 						}
 					}
 				}
@@ -309,6 +432,7 @@ function main () {
 			display_ship_hp();
 			display_ship_firing_speed();
 	}
+
 	if(global.run){
 		setTimeout(main, global.fps);
 	}
@@ -319,14 +443,17 @@ function game_state (bool) {
 
 	if(global.run){
 		global.counter = 0;
+		global.game_start = true;
+		global.clear = false;
 		init();
 		main();
 	}
-
-	if(!global.run && global.counter !== 0){
-		display_text(global.text.info, "GAME OVER!!");
+	if(!global.run && global.clear){
+		display_text(global.text.info, "CLEAR");
 	}else if(!global.run && global.counter === 0){
 		display_text(global.text.info, "START");
+	}else if(!global.run && global.counter !== 0){
+		display_text(global.text.info, "GAME OVER!!");
 	}
 }
 
@@ -393,29 +520,36 @@ function display_text (obj,text) {
 	global.context.fillText(text, x, y);
 }
 
-function display_ship_hp(){
+function display_ship_hp () {
 	// let hp_list = new Array(global.ship.life);
 	let hp_list = new Array(global.ship.life);
-	let w = 15;
-	let h = 30;
-	let x = global.$canvas.offsetLeft + 5;
-	let y = global.$canvas.offsetHeight - 70;
+
 	for(let i = 0; i < hp_list.length; i += 1){
-		let _x = 20 * i + 5;
+		let _x = global.text.hp.x * i + 5;
 		global.context.fillStyle = CONSTANT.ITEM_COLOR1;
-		global.context.fillRect(_x, y, w, h);
+		global.context.fillRect(_x, global.text.hp.y, global.text.hp.w, global.text.hp.h);
 	}
 }
 
-function display_ship_firing_speed(){
+function display_ship_firing_speed () {
 	let firing_speed_list = new Array(global.ship.firing_speed * -(1 / 100) + 4);
-	let w = 15;
-	let h = 30;
-	let x = global.$canvas.offsetLeft + 5;
-	let y = global.$canvas.offsetHeight - 35;
+
 	for(let i = 0; i < firing_speed_list.length; i += 1){
-		let _x = 20 * i + 5;
+		let _x = global.text.speed.x * i + 5;
 		global.context.fillStyle = CONSTANT.ITEM_COLOR2;
-		global.context.fillRect(_x, y, w, h);
+		global.context.fillRect(_x, global.text.speed.y,global.text.speed.w, global.text.speed.h);
 	}
+}
+
+function display_remaining_time () {
+	let time = global.csv_data[global.csv_data.length-1][0] - global.remaining_time;
+	let m = Math.floor(time / (60 * 1000));
+	time = time - (m * 60 * 1000);
+	let s = Math.floor(time / 1000);
+	let time_str = m + ":" + s;
+
+	global.context.font = global.text.limit_time.font;
+	global.context.textAlign = global.text.limit_time.align;
+	global.context.fillStyle = global.text.limit_time.style;
+	global.context.fillText(time_str, global.text.limit_time.position.x, global.text.limit_time.position.y)
 }
