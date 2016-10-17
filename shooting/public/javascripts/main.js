@@ -75,6 +75,9 @@ function main () {
 		}else if(type === "FIRING"){
 			color[0] = CONSTANT.ITEM_COLOR2;
 			color[1] = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
+		}else if(type === "POWER"){
+			color[0] = CONSTANT.ITEM_COLOR3;
+			color[1] = CONSTANT.CHARA_SHOT_COLOR_MODIFY1;
 		}
 
 		if(diff <= 6){
@@ -93,14 +96,36 @@ function main () {
 	/*ship shot draw*/
 	// set
 	if(global.fire){
-		for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){
-			if(!global.ship_shot[i].alive){
-				global.ship_shot[i].set([global.ship.position]);
-				break;
+		for(let j = 1; j <= global.ship.power; j += 1){
+			for(let i = 0; i < CONSTANT["CHARA_SHOT_MAX_COUNT"]; i += 1){
+				if(!global.ship_shot[i].alive){
+					let p;
+					switch(j){
+						case 1:
+							global.ship_shot[i].set([global.ship.position]);
+							break;
+						case 2:
+							p = {
+								x: global.ship.position.x,
+								y: global.ship.position.y - 10
+							}
+							global.ship_shot[i].set([p]);
+							break;
+						case 3:
+							p = {
+								x: global.ship.position.x,
+								y: global.ship.position.y + 10
+							}
+							global.ship_shot[i].set([p]);
+							break;
+					}
+					break;
+				}
 			}
 		}
 		global.fire = false;
 	}
+
 	// start path
 	global.context.beginPath();
 
@@ -322,8 +347,7 @@ function main () {
 									position: global.enemy[j].position
 								});
 								global.item.push(__item);
-							}
-							if(r === 2){
+							}else if(r === 2){
 								let __item = new Item();
 								__item.set({
 									type: "FIRING",
@@ -332,6 +356,15 @@ function main () {
 									position: global.enemy[j].position
 								});
 								global.item.push(__item);
+							}else if(r === 3){
+								let __item = new Item();
+								__item.set({
+									type: "POWER",
+									size: 5,
+									speed: 3,
+									position: global.enemy[j].position
+								});
+								global.item.push(__item)
 							}
 							break;
 						}
@@ -393,6 +426,8 @@ function main () {
 						case "FIRING":
 							global.context.fillStyle = CONSTANT.ITEM_COLOR2;
 							break;
+						case "POWER":
+							global.context.fillStyle = CONSTANT.ITEM_COLOR3;
 					}
 					global.context.fill();
 				}
@@ -420,8 +455,8 @@ function main () {
 						if(life <= 0){
 							game_state(false);
 						}else{
-							global.ship.set({life: life});
-							global.ship.change_state("DAMAGE");
+							// global.ship.set({life: life});
+							// global.ship.change_state("DAMAGE");
 						}
 
 						break;
@@ -431,6 +466,7 @@ function main () {
 
 			display_ship_hp();
 			display_ship_firing_speed();
+			display_ship_power();
 	}
 
 	if(global.run){
@@ -538,6 +574,16 @@ function display_ship_firing_speed () {
 		let _x = global.text.speed.x * i + 5;
 		global.context.fillStyle = CONSTANT.ITEM_COLOR2;
 		global.context.fillRect(_x, global.text.speed.y,global.text.speed.w, global.text.speed.h);
+	}
+}
+
+function display_ship_power () {
+	let power_list = new Array(global.ship.power);
+
+	for(let i = 0; i < power_list.length; i += 1){
+		let _x = global.text.power.x * i + 5;
+		global.context.fillStyle = CONSTANT.ITEM_COLOR3;
+		global.context.fillRect(_x, global.text.power.y, global.text.power.w, global.text.power.h);
 	}
 }
 

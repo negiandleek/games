@@ -22,6 +22,7 @@ export function init() {
 	global.ship.set({
 		life: 2,
 		size: 15,
+		power: 1,
 		firing_speed: 300
 	})
 	// ship shot
@@ -56,12 +57,17 @@ export function init() {
 	global.text.limit_time.position.y = global.$canvas.offsetHeight - 5;
 
 	global.text.hp.x =	global.$canvas.offsetLeft + 20;
-	global.text.hp.y = global.$canvas.offsetHeight - 70;
+	global.text.hp.y = global.$canvas.offsetHeight - 105;
 	global.text.hp.w = 20;
 	global.text.hp.h = 30;
 
 	global.text.speed.x = global.$canvas.offsetLeft + 20;
-	global.text.speed.y = global.$canvas.offsetHeight - 35;
+	global.text.speed.y = global.$canvas.offsetHeight - 70;
 	global.text.speed.w = 20;
 	global.text.speed.h = 30;
+
+	global.text.power.x = global.$canvas.offsetLeft + 20;
+	global.text.power.y = global.$canvas.offsetHeight - 35;
+	global.text.power.w = 20;
+	global.text.power.h = 30;
 }

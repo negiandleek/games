@@ -8,6 +8,8 @@ class Ship{
 		this.max_life = 3
 		this.firing_speed = 0;
 		this.max_firing_speed = 0;
+		this.power = 0;
+		this.max_power = 3;
 		this.invincible = false;
 		this.tmp = 0;
 	}
@@ -60,6 +62,11 @@ class Ship{
 				this.firing_speed = _firing_speed >= 100 ? _firing_speed: this.firing_speed;
 				this.invincible_state(type, 750);
 				break;
+			case "POWER":
+				let _power = this.power + 1;
+				this.power = _power <= this.max_power ? _power: this.power;
+				this.invincible_state(type, 750);
+				break
 		}
 	}
 	invincible_state(item_type,time){
