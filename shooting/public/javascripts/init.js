@@ -5,6 +5,7 @@ import Enemy_shot from "./enemy_shot";
 import {Boss, Henchman} from "./boss";
 import {global} from "./global";
 import {CONSTANT} from "./constant";
+import {load_assets} from "./assets";
 
 export function init() {
 	let x = global.$canvas.width / 2;
@@ -70,4 +71,16 @@ export function init() {
 	global.text.power.y = global.$canvas.offsetHeight - 35;
 	global.text.power.w = 20;
 	global.text.power.h = 30;
+
+	//csv,image
+	global.assets = [{
+		type: "csv", 
+		name: "enemy",
+		src: "./enemy.csv"
+	}];
+
+	load_assets(completed_csv_data);
+
+	function completed_csv_data () {
+	}
 }

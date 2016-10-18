@@ -4,13 +4,6 @@ import {init} from "./init";
 import {global} from "./global";
 import {CONSTANT} from "./constant";
 import {Item} from "./item";
-import {getEnemyCSV} from "./csv";
-
-getEnemyCSV();
-
-export function get_csv_data (result) {
-	global.csv_data = result;
-}
 
 document.addEventListener("DOMContentLoaded", function (){
 	// canvas init

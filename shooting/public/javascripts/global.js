@@ -49,10 +49,11 @@ export let global = {
 	csv: [],
 	icsv: 0,
 	item: [],
-	last_time: null,
-	init_time: null,
-	remaining_time: null,
+	last_time: "",
+	init_time: "",
+	remaining_time: "",
 	boss: [],
 	henchman: [],
-	clear: false
+	clear: false,
+	assets: []
 }
