@@ -21,6 +21,7 @@ var path = {
     jsEntrypoint: 'main.js',
     js: 'public/javascripts/',
     jsFiles: '**/*.{js,jsx,es6}',
+    imageFiles: '**/*.{jpg,jpeg,gif,png,svg}',
 }
 var opts = {
     isWatching: false,
@@ -89,6 +90,13 @@ gulp.task('mv:html', (cb) => {
         .pipe(gulp.dest(path.static))
 })
 
+// Images
+gulp.task('mv:images', (cb) => {
+    return gulp.src(path.public + path.imageFiles)
+        .pipe($.plumber())
+        .pipe(gulp.dest(path.static))
+})
+
 //CSV
 gulp.task('mv:csv', (cb) => {
     return gulp.src(path.public + '{,**/}*.csv')
@@ -132,7 +140,7 @@ gulp.task('default', (cb) => {
     seq('clean:tmpdir',
         'enable:debug-mode',
         'enable:watch-mode',
-        ['mv:html','babel','mv:csv'],
+        ['mv:html','babel','mv:csv',"mv:images"],
         'build:js',
         'watch',
         'clean:tmpdir',

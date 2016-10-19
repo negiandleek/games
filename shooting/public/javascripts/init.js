@@ -77,10 +77,25 @@ export function init() {
 		type: "csv", 
 		name: "enemy",
 		src: "./enemy.csv"
+	},{
+		type: "image",
+		name: "name",
+		src: "./images/ship.png"
 	}];
 
-	load_assets(completed_csv_data);
-
-	function completed_csv_data () {
-	}
+	let completed_assets = (function () {
+		let length = global.assets.length;
+		let count = 0;
+		let timer;
+		function progress () {
+			count += 1;
+			let percent = (count / length) * 100;
+			console.log(percent);
+		}
+		return {
+			progress
+		}
+	})();
+	
+	load_assets(completed_assets.progress);
 }

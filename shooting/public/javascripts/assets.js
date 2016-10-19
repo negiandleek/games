@@ -2,20 +2,21 @@ import {get_csv_data} from "./init";
 import {global} from "./global";
 
 export function load_assets (onComplete) {
-	let total = global.assets.length;
+	// let total = global.assets.length;
 	let load_count = 0;
 
 	function on_load () {
-		load_count = load_count + 1;
-		if(load_count >= total){
+		// load_count = load_count + 1;
+		// if(load_count >= total){
 			onComplete();
-		}
+		// }
 	}
 
 	try{
 		global.assets.forEach((item) => {
 			switch(item.type){
 				case "image":
+					load_img(item, on_load);
 					break;
 				case "csv":
 					load_csv(item, on_load);
@@ -59,4 +60,10 @@ function convert_csv_to_array (str) {
 
 	}
 	return result;
+}
+
+function load_img (assets, onLoad){
+	let image = new Image();
+	image.src = assets.src;
+	image.onload = onLoad;
 }
