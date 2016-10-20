@@ -55,5 +55,5 @@ export let global = {
 	boss: [],
 	henchman: [],
 	clear: false,
-	assets: []
+	asset: {}
 }

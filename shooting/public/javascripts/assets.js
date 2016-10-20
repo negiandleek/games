@@ -2,32 +2,27 @@ import {get_csv_data} from "./init";
 import {global} from "./global";
 
 export function load_assets (onComplete) {
-	// let total = global.assets.length;
 	let load_count = 0;
 
 	function on_load () {
-		// load_count = load_count + 1;
-		// if(load_count >= total){
-			onComplete();
-		// }
+		onComplete();
 	}
 
-	try{
-		global.assets.forEach((item) => {
-			switch(item.type){
-				case "image":
-					load_img(item, on_load);
-					break;
-				case "csv":
-					load_csv(item, on_load);
-					break;
-				default:
-					throw new Error("Unexpected assets type");
-			}
-		})
-	}catch(e){
-		console.error(e);
-	}
+	global.asset.assets.forEach((item) => {
+		switch(item.type){
+			case "image":
+				load_img(item, on_load);
+				break;
+			case "csv":
+				load_csv(item, on_load);
+				break;
+			case "sound":
+				load_sound(item, on_load);
+				break;
+			default:
+				throw new Error("Unexpected assets type");
+		}
+	})
 }
 
 function load_csv (asset, onLoad) {
@@ -63,7 +58,27 @@ function convert_csv_to_array (str) {
 }
 
 function load_img (assets, onLoad){
-	let image = new Image();
-	image.src = assets.src;
-	image.onload = onLoad;
+	let req = new XMLHttpRequest();
+	req.open("get", assets.src);
+	req.send();
+
+	req.onload = function () {
+		let image = new Image();
+		let svg = new Blob([req.responseText],{type: "image/svg+xml;charset=utf-8"})
+		let DOMURL = self.URL || self.webkitURL || self;
+		let url = DOMURL.createObjectURL(svg);
+		image.src = url;
+		global.asset.images = {};
+		global.asset.images[assets.name] = image;
+		image.onload = function () {
+			DOMURL.revokeObjectURL(url);
+			onLoad();
+		};
+	}
+}
+
+function load_sound (assets,onLoad){
+	let sound = new Audio(assets.src);
+	global.asset.sound[assets.name] = sound;
+	sound.onload = onLoad;
 }

@@ -73,24 +73,31 @@ export function init() {
 	global.text.power.h = 30;
 
 	//csv,image
-	global.assets = [{
+	global.asset.assets = [{
 		type: "csv", 
 		name: "enemy",
 		src: "./enemy.csv"
 	},{
 		type: "image",
-		name: "name",
-		src: "./images/ship.png"
+		name: "space_art",
+		src: "./images/spaceArt.txt"
+	},{
+		type: "sound",
+		name: "shot_s",
+		src: "./images/shot.mp3"
+	},{
+		type: "sound",
+		name: "bom_s",
+		src: "./images/bom.mp3"
 	}];
-
+	global.asset.sound = {};
 	let completed_assets = (function () {
-		let length = global.assets.length;
+		let length = global.asset.assets.length;
 		let count = 0;
 		let timer;
 		function progress () {
 			count += 1;
 			let percent = (count / length) * 100;
-			console.log(percent);
 		}
 		return {
 			progress

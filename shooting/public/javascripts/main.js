@@ -31,6 +31,18 @@ function main () {
 	// clear
 	global.context.clearRect(0,0, global.$canvas.width, global.$canvas.height);
 
+	global.context.drawImage(
+		global.asset.images.space_art,
+		0,
+		0,
+		100,
+		100,
+		0,
+		0,
+		500,
+		500
+	);
+
 	/*ship draw*/
 	// start path
 	global.context.beginPath();
@@ -42,15 +54,6 @@ function main () {
 			y: global.mouse.y
 		}
 	});
-
-	//proparty
-	global.context.arc(
-		global.ship.position.x,
-		global.ship.position.y,
-		global.ship.size,
-		0,
-		Math.PI * 2
-	);
 
 	// draw
 	if(global.ship.invincible){
@@ -84,7 +87,18 @@ function main () {
 	}else{
 		global.context.fillStyle = CONSTANT.CHARA_COLOR;
 	}
-	global.context.fill();
+
+	global.context.drawImage(
+		global.asset.images.space_art,
+		45,
+		270,
+		70,
+		100,
+		global.ship.position.x - 25, 
+		global.ship.position.y - 25,
+		50,
+		50
+	);
 
 	/*ship shot draw*/
 	// set
@@ -445,11 +459,14 @@ function main () {
 					let p = global.ship.position.distance(global.enemy_shot[i].position);
 					if(p.length() < global.ship.size && !global.ship.invincible){
 						let life = global.ship.life - 1;
+						global.enemy_shot[i].alive = false;
+						global.asset.sound.bom_s.currentTime = 0;
+						global.asset.sound.bom_s.play()
 						if(life <= 0){
 							game_state(false);
 						}else{
-							// global.ship.set({life: life});
-							// global.ship.change_state("DAMAGE");
+							global.ship.set({life: life});
+							global.ship.change_state("DAMAGE");
 						}
 
 						break;
@@ -502,12 +519,16 @@ function mouse_down () {
 	}
 	
 	if((global.last_time + global.ship.firing_speed <= now_date)){
+		global.asset.sound.shot_s.currentTime = 0;
+		global.asset.sound.shot_s.play()
 		global.fire = true;
 		global.last_time = now_date;
 	}
 
 	global.click = setInterval(()=>{
 		if(!global.ship.invincible){
+			global.asset.sound.shot_s.currentTime = 0;
+			global.asset.sound.shot_s.play()	
 			global.fire = true;
 		}
 	},  global.ship.firing_speed);
