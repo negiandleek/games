@@ -1,4 +1,21 @@
-let root = self;
+let root = root || {};
+
+root.namespace = function (string) {
+	let parts = string.split(".")
+	let parent = root;
+
+	if(parts[0] === "root"){
+		parts = parts.slice(1);
+	}
+
+	for(let i = 0, length = parts.length; i < length; i += 1){
+		if(typeof parent[parts[i]] === "undefined"){
+			parent[parts[i]] = {};
+		}
+		parent = parent[parts[i]];
+	}
+	return parent;
+};
 
 (function () {
 	window.addEventListener("DOMContentLoaded", () => {
@@ -23,4 +40,6 @@ let root = self;
 		images[asset.name].src = asset.src;
 		images[asset.name].onload = onLoad;
 	}
+
+	x
 }())
