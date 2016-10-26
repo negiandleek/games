@@ -11,7 +11,11 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 Game.init_assets({
-	name: "splite",
+	name: "player",
 	type: "image",
-	src: "./"
+	src: "./images/player.png"
+},{
+	name: "dungeon",
+	type: "image",
+	src: "./images/dungeon.png"
 });
