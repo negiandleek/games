@@ -5,7 +5,9 @@
 	root.Game = Game;
 
 	let Obj_proto = Object.prototype;
+	let Arr_proto = Array.prototype;
 	let toString = Obj_proto.toString;
+	let slice = Arr_proto.slice;
 
 	Game.namespace = function (string) {
 		let parts = string.split(".")
@@ -36,93 +38,76 @@
 		if(!Game.is_array(arr)){
 			return false;
 		}
-		Game.namespace("Game.assets.collections");
-		let collections = Game.assets.collections = [];
+
+		let collections = [];
 
 		for(let i = 0, len = arr.length; i < len; i += 1){
 			collections.push(arr[i]);
 		}
+
+		return collections;
 	};
 
-	Game.load = function (_time) {
-		let length = Game.assets_state.fetch_assets_length();
-		let time = _time || 0;
+	Game.loading_and_progress = function (col, mili) {
+		let length = col.length;
+		let time = mili || 0;
+		
+		let loaded = Game.progress_render(time, length);
+		loaded();
 
-		Game.progress_render.store_interval(time);
-		Game.progress_render.draw();
+		let assets = {
+			images: {},
+			fetch_images: function () {
+				return assets.images;
+			}
+		};
 
 		for(let i = 0; i < length; i += 1){
-			Game.namespace("Game.assets.images");
-			let images = Game.assets.images = [];
-			let assets = Game.assets.collections[i];
+			let item = col[i];
+			assets.images[item.name] = new Image();
+			assets.images[item.name].src = item.src;
+			assets.images[item.name].onload = loaded();
+		}
 
-			images[assets.name] = new Image();
-			images[assets.name].src = assets.src;
-			images[assets.name].onload = Game.progress_render.draw();
+		return assets;
+	};
+
+	Game.store_progress = function (len) {
+		let i = 0;
+
+		return function () {
+			let parcent = Math.floor((i / len) * 100);
+			i = i + 1;
+			return parcent;
 		}
 	};
 
-	Game.assets_state = (function () {
-		let length = 0;
-		let i = 0;
-		
-		function fetch_assets_length() {
-			try{
-				length = Game.assets.collections.length;
-			}catch(e) {
-				length = 0;
-			}
-			return length;
-		}
-		function loaded_assets_parcent() {
-			i = i + 1;
-			let parcent = (i / length) * 100;
-			return parcent;
-		}
-		return {
-			fetch_assets_length,
-			loaded_assets_parcent
-		};
-	})();
-
-	Game.progress_render = (function (self) {
-		let progress_times = 0;
+	Game.progress_render = function (mill, len) {
+		let call_times = 0;
 		let last_date = new Date().getTime();
 		// ロード時間の最小値
 		let load_min_time = 300;
 		let interval = 0;
+		let fetch_progress = Game.store_progress(len);
 
-		let store_interval = function (time) {
-			if(time >= load_min_time){
-				load_min_time = time;
-			}
-			let length = self.assets_state.fetch_assets_length();
-			interval = load_min_time / length;
-		}
+		interval = Math.max(mill, load_min_time) / len;
 
-		let draw = function () {
+		return Game.progress_render = function () {
 			let now = new Date().getTime();
-			progress_times += 1;
-
+			call_times += 1;
 			if(last_date + interval <= now){
-				while(progress_times >= 1){
+				while(call_times >= 1){
 					last_date = now;
-					progress_times -= 1;
-					console.log(self.assets_state.loaded_assets_parcent());
+					call_times -= 1;
+					Game.render_fore("progress",fetch_progress());
 					break;
 				}
 			}else{
 				let diff = now - (last_date + interval);
-				setTimeout(draw, diff);
+				setTimeout(Game.progress_render, diff);
 			}
 		}
-
-		return {
-			store_interval,
-			draw
-		}
-
-	}(Game));
+	};
 
 	Game.fetch_image_point = function(w,h,x,y) {
 	    let ix = 0;
@@ -138,5 +123,59 @@
 	    }
 	}
 
+	Game.store_canvases = function (dict) {
+		Game.namespace("Game.canvas");
+		let canvas = Game.canvas = [];
 
+		if(Game.is_dict(dict)){
+			for(let key in dict) {
+				canvas.push(dict[key]);
+			}
+		}
+	}
+
+	Game.store_contexts = function (dict) {
+		Game.namespace("Game.contexts");
+		let contexts = Game.contexts = [];
+
+		if(Game.is_dict(dict)){
+			for(let key in dict) {
+				contexts.push(dict[key]);
+			}
+		}
+	}
+
+	Game.render_back = function () {
+
+	}
+
+	Game.render_middle = function () {
+		let canvas = Game.canvas[1];
+		let ctx = Game.contexts[1];
+	}
+
+	Game.render_fore = function (type) {
+		let canvas = Game.canvas[2];
+		let ctx = Game.contexts[2];
+		let args = slice.call(arguments, 1);
+		if(type === "progress") {
+			let w = 200;
+			let h = 50;
+			let x = (canvas.width / 2) - (w / 2);
+			let y = (canvas.height / 2) - (h / 2);
+			
+			// 初期化
+			ctx.clearRect(x, y, w, h);
+			ctx.strokeStyle = "rgba(33,150,243,1)";
+			ctx.fillStyle = "rgba(33,150,243,1)";
+			
+			// 枠を描く
+			ctx.beginPath();
+			ctx.strokeRect(x, y, w, h);
+
+			// 進捗分だけ色を塗りつぶす
+			let pg_w = w * (args[0] / 100);
+			ctx.fillRect(x, y, pg_w, h);
+		}
+	}
 })();
