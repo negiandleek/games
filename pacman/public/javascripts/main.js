@@ -11,15 +11,21 @@ import "./game"
 
 	$.dom_loaded = function () {
 		let elems_tag = document.getElementsByTagName("canvas");
-		let collections = Game.init_assets([{
-			name: "player",
-			type: "image",
-			src: "./images/player.png"
-		},{
-			name: "dungeon",
-			type: "image",
-			src: "./images/dungeon.png"
-		}]);
+		let collections = Game.init_assets([
+			{
+				name: "player",
+				type: "image",
+				src: "./images/player.png"
+			},{
+				name: "dungeon",
+				type: "image",
+				src: "./images/dungeon.png"
+			},{
+				name: "field1",
+				type: "xml",
+				src: "./field1.xml"
+			}
+		]);
 
 		for(let i = 0, length = elems_tag.length; i < length; i += 1){
 			let id_name = elems_tag[i].id;

@@ -90,6 +90,14 @@ gulp.task('mv:html', (cb) => {
         .pipe(gulp.dest(path.static))
 })
 
+// Xml
+gulp.task('mv:xml', (cb) => {
+    return gulp.src(path.public + '{,**/}*.xml')
+        .pipe($.plumber())
+        .pipe(gulp.dest(path.static))
+})
+
+
 // Images
 gulp.task('mv:images', (cb) => {
     return gulp.src(path.public + path.imageFiles)
@@ -140,7 +148,7 @@ gulp.task('default', (cb) => {
     seq('clean:tmpdir',
         'enable:debug-mode',
         'enable:watch-mode',
-        ['mv:html','babel','mv:csv',"mv:images"],
+        ['mv:html','babel','mv:csv',"mv:images", "mv:xml"],
         'build:js',
         'watch',
         'clean:tmpdir',
