@@ -10,7 +10,8 @@
 	let slice = Arr_proto.slice;
 
 	Game.store_state = function () {
-		let state = "menu";
+		// title, loading, gameover, continue, menu, setting
+		let state = "title";
 		return state;
 	}
 
@@ -31,6 +32,10 @@
 		return parent;
 	};
 	
+	Game.is_bool = function (obj) {
+		return obj === true || obj === false || toString.call(obj) === "[object Boolean]";
+	}
+
 	Game.is_array = function (arr) {
 		return toString.call(arr) === "[object Array]";
 	}
@@ -250,7 +255,35 @@
 				setTimeout(Game.render_fore, 100, "start_menu");
 			}
 		} else if(context === "start_menu") {
-			ctx.clearRect(0, 0, 250, 250);
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+		}
+	}
+
+	Game.click = function (e) {
+		// thisはcallback元のdom
+	}
+
+	Game.create_title = function (style, setting){
+		if(style != null && is_dict(style)){
+
+		}else if(style == null  || style === false){
+			let menu_style = {
+				font_size: "2em",
+				position: "absolute",
+				top: "0",
+				left: "0",
+				right: "0",
+				bottom: "0",
+				margin: "auto"
+			}
+			let doc = document.implementation.createHTMLDocument("");
+		}
+		if(setting == null){
+			setting = false;
+		}
+
+		if(is_bool(setting)){
+
 		}
 	}
 })();
