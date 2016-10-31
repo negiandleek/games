@@ -264,26 +264,75 @@
 	}
 
 	Game.create_title = function (style, setting){
+		let doc = document.implementation.createHTMLDocument("");
+		let menu = doc.createElement("div");
+		menu.classList.add("menu");
+
+		let menu__title = doc.createElement("div");
+		menu__title.classList.add("menu__title");
+
+		let p1 = doc.createElement("p");			
+		p1.textContent = "FAKED PACMAN"
+
+		menu__title.appendChild(p1);
+
+		let menu__start = doc.createElement("div");
+		menu__start = menu__start.classList.add("menu__start");
+
+		let p2 = doc.createElement("p");			
+		p2.textContent = "START"
+
+		menu__start.appendChild(p2);
+
+		let menu__setting = doc.createElement("div");
+		menu__setting = menu__setting.classList.add("menu__setting");
+
+		let p3 = doc.createElement("p");
+		p3.textContent = "SEETING";	
+
+		menu__setting.appendChild(p3);
+
+		menu.appendChild(menu__title)
+		menu.appendChild(menu__start);
+		menu.appendChild(menu__setting);
+		
 		if(style != null && is_dict(style)){
 
 		}else if(style == null  || style === false){
-			let menu_style = {
-				font_size: "2em",
-				position: "absolute",
-				top: "0",
-				left: "0",
-				right: "0",
-				bottom: "0",
-				margin: "auto"
-			}
-			let doc = document.implementation.createHTMLDocument("");
+			let css = {
+				menu: {
+					position: "absolute";
+					left: "50%";
+					top: "50%";
+					text_align: "center";
+					font_size: "1.5em";
+					_webkit_transform: "translate(-50%,-50%)";
+					_ms_transform: "translate(-50%,-50%)";
+					transform: "translate(-50%,-50%)";
+				},
+				menu__title:{
+					font_size: "2em";
+  					padding: "8px 16px";
+  					margin_bottom: "8px";
+				},
+				menu__start: {
+					padding: "8px 16px";
+  					margin_bottom: "8px"; 
+  					font_size: "1.5em";
+				},
+				menu_setting: {
+					padding: "8px 16px";
+  					font_size: "1.5em";
+  					margin_bottom: "8px";
+				}
+			};
 		}
 		if(setting == null){
 			setting = false;
 		}
 
-		if(is_bool(setting)){
-
+		if(!is_bool(setting)){
+			menu.removChild(menu__setting)
 		}
 	}
 })();
