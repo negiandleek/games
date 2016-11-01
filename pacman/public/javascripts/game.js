@@ -1,16 +1,27 @@
+import * as dom from "./dom";
+
 (function () {
 	let root = self;
 
 	let Game = {};
 	root.Game = Game;
 
+	// init variable
+	Game.assets = {};
+	Game.dom = {};
+
 	let Obj_proto = Object.prototype;
 	let Arr_proto = Array.prototype;
+	let Func_proto = Function.prototype;
 	let toString = Obj_proto.toString;
 	let slice = Arr_proto.slice;
+	let call = Func_proto.call;
+
+	Game.dom.title_menu = dom.create_html("title_menu");
+	Game.dom.title_menu_css = dom.create_css("title_menu_css")
 
 	Game.store_state = function () {
-		// title, loading, gameover, continue, menu, setting
+		// title, loading, gameover, continue, title_menu, setting
 		let state = "title";
 		return state;
 	}
@@ -73,7 +84,11 @@
 		let imgs_length = col.images.length;
 		let xml_length = col.xmls.length;
 		let time = mili || 0;
-		let loaded = Game.progress_render(time, imgs_length + xml_length);
+
+		// title menu も含めるので最後に1を足す。
+		let loaded = Game.progress_render(time, imgs_length + xml_length + 1);
+		
+		Game.create_title_menu(loaded);
 		loaded();
 		
 		let assets = {
@@ -166,7 +181,10 @@
 
 		interval = Math.max(mill, load_min_time) / len;
 
-		return Game.progress_render = function () {
+		return Game.progress_render = function (context) {
+			if(context != null && context !== false){
+				Game.assets[context] = this;
+			}
 			let now = new Date().getTime();
 			call_times += 1;
 			if(last_date + interval <= now){
@@ -252,10 +270,11 @@
 			ctx.fillRect(x, y, pg_w, h);
 			
 			if(args[0] === 100){
-				setTimeout(Game.render_fore, 100, "start_menu");
+				setTimeout(Game.render_fore, 100, "title_menu");
 			}
-		} else if(context === "start_menu") {
+		} else if(context === "title_menu") {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.drawImage(Game.assets.title_menu, 0, 0)
 		}
 	}
 
@@ -263,76 +282,68 @@
 		// thisはcallback元のdom
 	}
 
-	Game.create_title = function (style, setting){
-		let doc = document.implementation.createHTMLDocument("");
-		let menu = doc.createElement("div");
-		menu.classList.add("menu");
+	Game.create_title_menu = function (title, style, setting){
+		let canvas = Game.canvas[2];
 
-		let menu__title = doc.createElement("div");
-		menu__title.classList.add("menu__title");
+		if(title == null) {
+			throw new Error("TypeError: title is not defined, Game.js")
+		}
 
-		let p1 = doc.createElement("p");			
-		p1.textContent = "FAKED PACMAN"
+		let elem = Game.dom.title_menu.querySelector(".menu__title > p");
+		elem.textContent = title;
 
-		menu__title.appendChild(p1);
-
-		let menu__start = doc.createElement("div");
-		menu__start = menu__start.classList.add("menu__start");
-
-		let p2 = doc.createElement("p");			
-		p2.textContent = "START"
-
-		menu__start.appendChild(p2);
-
-		let menu__setting = doc.createElement("div");
-		menu__setting = menu__setting.classList.add("menu__setting");
-
-		let p3 = doc.createElement("p");
-		p3.textContent = "SEETING";	
-
-		menu__setting.appendChild(p3);
-
-		menu.appendChild(menu__title)
-		menu.appendChild(menu__start);
-		menu.appendChild(menu__setting);
-		
 		if(style != null && is_dict(style)){
 
-		}else if(style == null  || style === false){
-			let css = {
-				menu: {
-					position: "absolute";
-					left: "50%";
-					top: "50%";
-					text_align: "center";
-					font_size: "1.5em";
-					_webkit_transform: "translate(-50%,-50%)";
-					_ms_transform: "translate(-50%,-50%)";
-					transform: "translate(-50%,-50%)";
-				},
-				menu__title:{
-					font_size: "2em";
-  					padding: "8px 16px";
-  					margin_bottom: "8px";
-				},
-				menu__start: {
-					padding: "8px 16px";
-  					margin_bottom: "8px"; 
-  					font_size: "1.5em";
-				},
-				menu_setting: {
-					padding: "8px 16px";
-  					font_size: "1.5em";
-  					margin_bottom: "8px";
-				}
-			};
 		}
+
+		for(let key in Game.dom.title_menu_css){
+			let elem;
+			if(key === "menu"){
+				elem = Game.dom.title_menu;
+			}else{
+				elem = Game.dom.title_menu.querySelector("." + key);
+			}
+			let css = Game.dom.title_menu_css[key];
+			for(let k in css){
+				let tmp = k;
+
+				k = k.replace(/_[A-Za-z]/, (match) => {
+					let str = match.substring(1);
+					return str.toUpperCase();
+				});
+
+				elem.style[k] = css[tmp];
+			}
+		}
+
 		if(setting == null){
 			setting = false;
 		}
 
-		if(!is_bool(setting)){
-			menu.removChild(menu__setting)
+		if(Game.is_bool(setting) && setting === false){
+			let elem = Game.dom.title_menu.querySelector(".menu__setting");
+			Game.dom.title_menu.removeChild(elem)
 		}
+
+   		return Game.create_title_menu = function (cb) {
+   			let canvas = Game.canvas[2];
+   			let data = "<svg xmlns='http://www.w3.org/2000/svg' width='" + canvas.width + "' height='" + canvas.height + "'>" +
+						"<foreignObject width='100%' height='100%'>" +
+						"<div xmlns='http://www.w3.org/1999/xhtml' style='width: 512px'>" +
+						Game.dom.title_menu.outerHTML +
+						"</div>" +
+						"</foreignObject>" +
+						"</svg>";
+
+			let DOMURL = self.URL || self.webkitURL || self;
+	   		let svg = new Blob([data], {type: "image/svg+xml; charset=utf-8"});
+	   		let url = DOMURL.createObjectURL(svg);
+	   		let img = new Image();
+	   		img.src = url;
+	   		img.onload = function () {
+	   			DOMURL.revokeObjectURL(url);
+	   			cb.call(img, "title_menu")
+	   		}
+   		}
 	}
 })();

@@ -4,9 +4,7 @@ import "./game"
 	// 初期化
 	let root = self;
 	root.$ = {};
-
-	Game.create_title();
-
+	
 	window.addEventListener("DOMContentLoaded",()=>{
 		$.dom_loaded();
 	});
@@ -37,11 +35,13 @@ import "./game"
 				$.save_canvas(id_name);
 			}
 		}
-		$.assets = Game.loading_and_progress(collections, 300);
-
 		Game.store_canvases($.canvases);
 		Game.store_contexts($.contexts);
 		Game.render_middle();
+		// titleやstyleをセットする
+		Game.create_title_menu("FAKED PACMAN");
+
+		$.assets = Game.loading_and_progress(collections, 300);
 	}
 	
 	let w = 512;
