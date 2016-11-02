@@ -18,6 +18,8 @@ var path = {
     public: 'public/',
     browserifyCache: '.browserify-cache/',
     static: 'static/',
+    styleEntrypoint: 'main.scss',
+    style: 'public/stylesheets/',
     jsEntrypoint: 'main.js',
     js: 'public/javascripts/',
     jsFiles: '**/*.{js,jsx,es6}',
@@ -27,6 +29,25 @@ var opts = {
     isWatching: false,
     isDebug: false
 }
+
+gulp.task('build:sass', function() {
+    return $.rubySass(path.style + path.styleEntrypoint)
+        .on('error', function (err) {
+            console.error('Error!', err.message)
+         })
+        .pipe($.cached('sass'))
+        .pipe($.plumber())
+        .pipe($.pleeease({
+          autoprefixer: {
+              browsers: ['last 5 versions']
+          },
+          minifier: true
+        }))
+        .pipe(gulp.dest(path.static))
+        .pipe($.notify({
+            message: 'Styles task complete'
+        }))
+})
 
 gulp.task('babel', (cb) => {
     return gulp.src(path.js + path.jsFiles)
@@ -136,6 +157,12 @@ gulp.task('watch', (cb) => {
     $.watch([path.public + '**/*.html'], function(cb) {
         seq('mv:html',browserSync.reload);
     });
+    $.watch([path.public + '**/*.scss'], function(cb) {
+        seq('build:sass',browserSync.reload);
+    }); 
+    $.watch([path.public + '**/*.{gif,jpg,jpeg,png,svg,ttf}'], function(cb) {
+        seq('mv:images',browserSync.reload);
+    });
     $.watch([path.js + '**/*'], function(cb) {
         seq('babel');
     })
@@ -148,7 +175,7 @@ gulp.task('default', (cb) => {
     seq('clean:tmpdir',
         'enable:debug-mode',
         'enable:watch-mode',
-        ['mv:html','babel','mv:csv',"mv:images", "mv:xml"],
+        ['mv:html','build:sass','babel','mv:csv',"mv:images", "mv:xml"],
         'build:js',
         'watch',
         'clean:tmpdir',

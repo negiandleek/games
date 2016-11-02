@@ -85,10 +85,8 @@ import * as dom from "./dom";
 		let xml_length = col.xmls.length;
 		let time = mili || 0;
 
-		// title menu も含めるので最後に1を足す。
-		let loaded = Game.progress_render(time, imgs_length + xml_length + 1);
+		let loaded = Game.progress_render(time, imgs_length + xml_length);
 		
-		Game.create_title_menu(loaded);
 		loaded();
 		
 		let assets = {
@@ -274,7 +272,6 @@ import * as dom from "./dom";
 			}
 		} else if(context === "title_menu") {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			ctx.drawImage(Game.assets.title_menu, 0, 0)
 		}
 	}
 
@@ -282,68 +279,30 @@ import * as dom from "./dom";
 		// thisはcallback元のdom
 	}
 
-	Game.create_title_menu = function (title, style, setting){
-		let canvas = Game.canvas[2];
-
+	Game.create_title_menu = function (title, w, h, setting){
 		if(title == null) {
-			throw new Error("TypeError: title is not defined, Game.js")
+			throw new Error("TypeError: title is not defined, Game.js");
+		}
+		if(arguments.length < 3){
+			throw new Error("TypeError: 3 arguments required, Game.js");
 		}
 
-		let elem = Game.dom.title_menu.querySelector(".menu__title > p");
-		elem.textContent = title;
+		let ui = document.getElementById("ui");
+		console.log(ui);
+		// ui.style.width = w;
+		// ui.style.height = h;
 
-		if(style != null && is_dict(style)){
-
-		}
-
-		for(let key in Game.dom.title_menu_css){
-			let elem;
-			if(key === "menu"){
-				elem = Game.dom.title_menu;
-			}else{
-				elem = Game.dom.title_menu.querySelector("." + key);
-			}
-			let css = Game.dom.title_menu_css[key];
-			for(let k in css){
-				let tmp = k;
-
-				k = k.replace(/_[A-Za-z]/, (match) => {
-					let str = match.substring(1);
-					return str.toUpperCase();
-				});
-
-				elem.style[k] = css[tmp];
-			}
-		}
+		let h1 = document.querySelector(".title_menu__header > h1");
+		h1.textContent = title;
 
 		if(setting == null){
 			setting = false;
 		}
 
 		if(Game.is_bool(setting) && setting === false){
-			let elem = Game.dom.title_menu.querySelector(".menu__setting");
-			Game.dom.title_menu.removeChild(elem)
+			let parent_elem = document.querySelector(".title_menu");
+			let child_elem = document.querySelector(".title_menu__setting");
+			parent_elem.removeChild(child_elem);
 		}
-
-   		return Game.create_title_menu = function (cb) {
-   			let canvas = Game.canvas[2];
-   			let data = "<svg xmlns='http://www.w3.org/2000/svg' width='" + canvas.width + "' height='" + canvas.height + "'>" +
-						"<foreignObject width='100%' height='100%'>" +
-						"<div xmlns='http://www.w3.org/1999/xhtml' style='width: 512px'>" +
-						Game.dom.title_menu.outerHTML +
-						"</div>" +
-						"</foreignObject>" +
-						"</svg>";
-
-			let DOMURL = self.URL || self.webkitURL || self;
-	   		let svg = new Blob([data], {type: "image/svg+xml; charset=utf-8"});
-	   		let url = DOMURL.createObjectURL(svg);
-	   		let img = new Image();
-	   		img.src = url;
-	   		img.onload = function () {
-	   			DOMURL.revokeObjectURL(url);
-	   			cb.call(img, "title_menu")
-	   		}
-   		}
 	}
 })();

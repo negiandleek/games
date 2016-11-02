@@ -3,27 +3,26 @@
 <head>
 	<meta charset="UTF-8">
 	<title>pacman</title>
-	<style>
-		@font-face {
-			font-family: "pixcel font";
-			src: url("./images/font.ttf");
-		}
-		canvas {
-			position: absolute;
-		}
-		div {
-			position: relative;
-		}
-		h1,p {
-			margin: 0;
-		}
-	</style>
+	<link rel="stylesheet" href="./main.css">
 </head>
 <body>
 	<div id = "main">
 		<canvas id = "back"></canvas>
 		<canvas id = "middle"></canvas>
 		<canvas id = "fore"></canvas>
+		<div id="ui">
+			<div class="title_menu">
+				<div class="title_menu__header">
+					<h1></h1>
+				</div>
+				<div class="title_menu__start">
+					<p>start</p>
+				</div>
+				<div class="title_menu__setting">
+					<p>setting</p>
+				</div>
+			</div>
+		</div>
 	</div>
 <script type="text/javascript" src="./bundle.js"></script>
 </body>

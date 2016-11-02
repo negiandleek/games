@@ -5,8 +5,11 @@ import "./game"
 	let root = self;
 	root.$ = {};
 	
+	$.w = 512;
+	$.h = 512;
+
 	window.addEventListener("DOMContentLoaded",()=>{
-		$.dom_loaded();
+			$.dom_loaded();
 	});
 
 	$.dom_loaded = function () {
@@ -39,21 +42,19 @@ import "./game"
 		Game.store_contexts($.contexts);
 		Game.render_middle();
 		// titleやstyleをセットする
-		Game.create_title_menu("FAKED PACMAN");
+		Game.create_title_menu("FAKED PACMAN",$.w, $.h);
 
 		$.assets = Game.loading_and_progress(collections, 300);
 	}
-	
-	let w = 512;
-	let h = 512;
+
 	$.canvases = {};
 	$.contexts = {};
 
 	$.save_canvas = function (name) {
 		let args = Array.prototype.slice.call(arguments, $.save_canvas.length);
 		$.canvases[name] = document.getElementById(name);
-		$.canvases[name].width = w;
-		$.canvases[name].height = h;
+		$.canvases[name].width = $.w;
+		$.canvases[name].height = $.h;
 		$.contexts[name] = $.canvases[name].getContext("2d")
 
 		// 最も前にあるcanvasにのみイベントを付与
