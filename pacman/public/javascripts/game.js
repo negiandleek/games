@@ -25,6 +25,7 @@
 			if(Game.is_func(cb)){
 				cb();
 			}
+			return Game.store_game_state;
 		}
 
 		stored_game_state.fetch = function() {
@@ -68,6 +69,26 @@
 
 	Game.is_func = function (obj) {
 		return typeof obj == "function" || false;
+	}
+
+	Game.extend = function(context, obj){
+		let astr = "[object Array]";
+		for(let key in obj){
+			if(obj.hasOwnProperty(key)){
+				if(typeof obj[key] === "object"){
+					let tmp;
+					tmp = toString.call(obj[key] === astr)? []: {};
+					tmp = obj[key];
+					Game.extend(context, tmp);
+				}else{
+					if(!context.hasOwnProperty(key)){
+						throw new Error("ReferenceError: key proparty is not defined)");
+					}
+					context[key] = obj[key];
+				}
+			}
+		}
+		return context;
 	}
 
 	Game.init_assets = function (arr) {
@@ -115,7 +136,7 @@
 			fetch_images: function () {
 				return assets.images;
 			},
-			fetch_csv: function () {
+			fetch_csvs: function () {
 				return assets.csv;
 			}
 		};
@@ -166,10 +187,13 @@
 			one_arr.pop();
 
 			for(let i = 0, length = one_arr.length; i < length; i += 1) {
-				one_arr[i] = one_arr[i].substring(0, one_arr[i].length - 1);
+				if(i !== length - 1){
+					one_arr[i] = one_arr[i].substring(0, one_arr[i].length - 1);
+				}
 				two_arr[i] = one_arr[i].split(",");
-				for(let j = 0; j < two_arr[i].length; j += 1){
-					two_arr[i][j] = two_arr[i][j] - 0;
+				for(let j = 0, len = two_arr[i].length; j < len; j += 1){
+					// tiledのcsvは(0, 0)が1として扱われる
+					two_arr[i][j] = two_arr[i][j] - 1;
 				}
 			}
 			return two_arr;
@@ -225,18 +249,23 @@
 		}
 	};
 
-	Game.fetch_image_point = function(w, h, x, y) {
+	Game.create_point = function (w, h, p_w, p_h) {
 	    let ix = 0;
 	    let iy = 0;
-	    for(;iy <= h; iy += y){
+	    let point = [];
+	    let width = w - p_w;
+	    let height = h - p_h;
+
+	    for(;iy <= height ; iy += p_h){
 	        ix = 0;
-	        for(; ix <= w; ix += x){
+	        for(; ix <= width; ix += p_w){
 	            point.push({
 	                x: ix,
 	                y: iy
 	            }) 
 	        }
 	    }
+	    return point;
 	}
 
 	Game.store_canvases = function (dict) {
@@ -261,13 +290,38 @@
 		}
 	}
 
-	let render_back = function () {
+	Game.render_back = function (context) {
+		let canvas = Game.canvas[0];
+		let ctx = Game.contexts[0];
+		let args = slice.call(arguments, 1);
+		
+		if(context == null){
+			throw new Error("TypeError: context is not defined, Game.js");
+		}
 
+		if(context === "playing"){
+			let csv = args[1];
+			let img_point = args[2];
+			let canvas_point = args[3];
+			let index = 0;
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			
+			for(let i = 0, len = csv.length; i < len; i += 1){
+				for(let j = 0, _len = csv[i].length; j < _len; j += 1){
+					render(img_point[csv[i][j]], canvas_point[index],16, 16);
+					index = index + 1;
+				}
+			}
+		}
+		function render(img_p, can_p, w, h) {
+			ctx.drawImage(args[0], img_p.x, img_p.y, w, h, can_p.x, can_p.y, w, h);
+		}
 	}
 
-	let render_middle = function () {
+	let render_middle = function (context) {
 		let canvas = Game.canvas[1];
 		let ctx = Game.contexts[1];
+		let args = slice.call(arguments, 1);
 	}
 
 	let render_fore = function (context) {
@@ -298,8 +352,10 @@
 			if(args[0] === 100){
 				render_fore("title_menu");
 			}
-		} else if(context === "title_menu") {
+		}else if(context === "title_menu") {
 			Game.store_game_state("title_menu");
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+		}else if(context === "playing") {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 		}
 	}
@@ -374,6 +430,20 @@
 		}else{
 			state = dom.getAttribute("data-state");
 		}
-		Game.store_game_state(state);
+		return Game.store_game_state(state).fetch();
+	}
+	Game.player = class {
+		constructor(img, x, y) {
+			this.img = img;
+			this.x = x;
+			this.y = y;	
+			this.speed;
+			this.size;
+		}
+		set(obj) {
+			if(Game.is_dict(obj)){
+				Game.extend(this, obj);
+			}
+		}
 	}
 })();

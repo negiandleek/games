@@ -45,9 +45,9 @@ import "./game"
 		Game.store_canvases($.canvases);
 		Game.store_contexts($.contexts);
 		// titleやstyleをセットする
-		$.is_setting = Game.create_title_menu("FAKED PACMAN",$.w, $.h, true);
+		$.is_setting = Game.create_title_menu("FAKED PACMAN", $.w, $.h);
 
-		$.assets = Game.loading_and_progress(collections, 300, $.operate_dom);
+		$.assets = Game.loading_and_progress(collections, 300, $.operate_game);
 	}
 
 	$.save_canvas = function (name) {
@@ -76,18 +76,22 @@ import "./game"
 	}
 
 	// Game moduleで管理する
-	$.operate_dom = function () {
-		let state = Game.store_game_state.fetch();
+	$.operate_game = function (context) {
+		let state = context || Game.store_game_state.fetch();
 		console.log(state);
-		
+
+		$.dom.title_menu.style.display = "none";
+
 		if(state === "title_menu") {
 			setTimeout(()=>{
 				$.dom.title_menu_start.focus()
 			},0);
+
 			$.dom.title_menu.addEventListener("click", (e)=> {
 				e.stopPropagation();
-				Game.change_state_by_dom(e.target)
+				$.operate_game(Game.change_state_by_dom(e.target))
 			})
+
 			$.dom.title_menu.addEventListener("keydown", (e)=> {
 				let key_code = e.keyCode;
 				// up key 38
@@ -95,12 +99,21 @@ import "./game"
 				if(key_code === 38 || key_code === 40 && $.is_setting()){
 					Game.dom_atr_toggle("data-select", "data", $.dom.title_menu_start, $.dom.title_menu_setting);
 				}else if(key_code === 13){
-					Game.change_state_by_dom($.dom.title_menu, "data-select");
+					$.operate_game(Game.change_state_by_dom($.dom.title_menu, "data-select"));
 				}else{
 					return false;
 				}
 			});
 			$.dom.title_menu.style.display = "block";
+		}else if(state === "playing"){
+			let images = $.assets.fetch_images();
+			let csvs = $.assets.fetch_csvs();
+			let img_point = Game.create_point(384, 160, 16, 16);
+			let canvas_point = Game.create_point(512, 512, 16, 16);
+			let dungeon_img = images.dungeon;
+			let field_csv = csvs.filed;
+
+			Game.render_back(state, dungeon_img, field_csv, img_point, canvas_point);
 		}
 	}
 }());
