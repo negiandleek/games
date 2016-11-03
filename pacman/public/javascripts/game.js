@@ -1,5 +1,3 @@
-import * as dom from "./dom";
-
 (function () {
 	let root = self;
 
@@ -8,7 +6,6 @@ import * as dom from "./dom";
 
 	// init variable
 	Game.assets = {};
-	Game.dom = {};
 
 	let Obj_proto = Object.prototype;
 	let Arr_proto = Array.prototype;
@@ -17,16 +14,26 @@ import * as dom from "./dom";
 	let slice = Arr_proto.slice;
 	let call = Func_proto.call;
 
-	Game.dom.title_menu = dom.create_html("title_menu");
-	Game.dom.title_menu_css = dom.create_css("title_menu_css")
+	Game.store_game_state = (function () {
+		// init, title_menu,loading, playing, gameover, continue_menu, setting
+		let state = "init";
+		
+		let stored_game_state = function(type, cb) {
+			if(Game.is_str(type)){
+				state = type;
+			}
+			if(Game.is_func(cb)){
+				cb();
+			}
+		}
 
-	Game.store_state = function () {
-		// title, loading, gameover, continue, title_menu, setting
-		let state = "title";
-		return state;
-	}
+		stored_game_state.fetch = function() {
+			return state;
+		}
+		return stored_game_state;
+	}());
 
-	Game.namespace = function (string) {
+	let namespace = function (string) {
 		let parts = string.split(".")
 		let parent = Game;
 
@@ -43,6 +50,10 @@ import * as dom from "./dom";
 		return parent;
 	};
 	
+	Game.is_str = function (obj) {
+		return toString.call(obj) === "[object String]";
+	}
+
 	Game.is_bool = function (obj) {
 		return obj === true || obj === false || toString.call(obj) === "[object Boolean]";
 	}
@@ -54,6 +65,10 @@ import * as dom from "./dom";
 	Game.is_dict = function (obj) {
 		return toString.call(obj) === "[object Object]";
 	};
+
+	Game.is_func = function (obj) {
+		return typeof obj == "function" || false;
+	}
 
 	Game.init_assets = function (arr) {
 		if(!Game.is_array(arr)){
@@ -80,12 +95,16 @@ import * as dom from "./dom";
 		return collections;
 	};
 
-	Game.loading_and_progress = function (col, mili) {
+	Game.loading_and_progress = function (col, mili, cb) {
 		let imgs_length = col.images.length;
 		let xml_length = col.xmls.length;
 		let time = mili || 0;
 
-		let loaded = Game.progress_render(time, imgs_length + xml_length);
+		if(!Game.is_func(cb)){
+			cb = null;
+		}
+
+		let loaded = progress_throttle(time, imgs_length + xml_length, cb);
 		
 		loaded();
 		
@@ -159,7 +178,7 @@ import * as dom from "./dom";
 		return assets;
 	};
 
-	Game.store_progress = function (len) {
+	let store_progress = function (len) {
 		let i = 0;
 
 		return function () {
@@ -169,17 +188,17 @@ import * as dom from "./dom";
 		}
 	};
 
-	Game.progress_render = function (mill, len) {
+	let progress_throttle = function (mill, len, cb) {
 		let call_times = 0;
 		let last_date = new Date().getTime();
 		// ロード時間の最小値
 		let load_min_time = 300;
 		let interval = 0;
-		let fetch_progress = Game.store_progress(len);
+		let fetch_progress = store_progress(len);
 
 		interval = Math.max(mill, load_min_time) / len;
 
-		return Game.progress_render = function (context) {
+		return progress_throttle = function (context) {
 			if(context != null && context !== false){
 				Game.assets[context] = this;
 			}
@@ -187,14 +206,21 @@ import * as dom from "./dom";
 			call_times += 1;
 			if(last_date + interval <= now){
 				while(call_times >= 1){
+					let parcent = fetch_progress();
 					last_date = now;
 					call_times -= 1;
-					Game.render_fore("progress",fetch_progress());
+
+					render_fore("progress",parcent);
+
+					// 全て読み込み終えたら描画後にcallback関数を実行する
+					if(parcent === 100 && cb != null){
+						cb();
+					}
 					break;
 				}
 			}else{
 				let diff = now - (last_date + interval);
-				setTimeout(Game.progress_render, diff);
+				setTimeout(progress_throttle, diff);
 			}
 		}
 	};
@@ -214,7 +240,7 @@ import * as dom from "./dom";
 	}
 
 	Game.store_canvases = function (dict) {
-		Game.namespace("Game.canvas");
+		namespace("Game.canvas");
 		let canvas = Game.canvas = [];
 
 		if(Game.is_dict(dict)){
@@ -225,7 +251,7 @@ import * as dom from "./dom";
 	}
 
 	Game.store_contexts = function (dict) {
-		Game.namespace("Game.contexts");
+		namespace("Game.contexts");
 		let contexts = Game.contexts = [];
 
 		if(Game.is_dict(dict)){
@@ -235,20 +261,22 @@ import * as dom from "./dom";
 		}
 	}
 
-	Game.render_back = function () {
+	let render_back = function () {
 
 	}
 
-	Game.render_middle = function () {
+	let render_middle = function () {
 		let canvas = Game.canvas[1];
 		let ctx = Game.contexts[1];
 	}
 
-	Game.render_fore = function (context) {
+	let render_fore = function (context) {
 		let canvas = Game.canvas[2];
 		let ctx = Game.contexts[2];
 		let args = slice.call(arguments, 1);
 		if(context === "progress") {
+			Game.store_game_state("loading");
+
 			let w = 200;
 			let h = 50;
 			let x = (canvas.width / 2) - (w / 2);
@@ -268,18 +296,20 @@ import * as dom from "./dom";
 			ctx.fillRect(x, y, pg_w, h);
 			
 			if(args[0] === 100){
-				setTimeout(Game.render_fore, 100, "title_menu");
+				render_fore("title_menu");
 			}
 		} else if(context === "title_menu") {
+			Game.store_game_state("title_menu");
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 		}
 	}
 
 	Game.click = function (e) {
-		// thisはcallback元のdom
 	}
 
 	Game.create_title_menu = function (title, w, h, setting){
+		let state = true;
+
 		if(title == null) {
 			throw new Error("TypeError: title is not defined, Game.js");
 		}
@@ -288,9 +318,9 @@ import * as dom from "./dom";
 		}
 
 		let ui = document.getElementById("ui");
-		console.log(ui);
-		// ui.style.width = w;
-		// ui.style.height = h;
+		ui.style.width = w + "px";
+		ui.style.height = h + "px";
+
 
 		let h1 = document.querySelector(".title_menu__header > h1");
 		h1.textContent = title;
@@ -303,6 +333,47 @@ import * as dom from "./dom";
 			let parent_elem = document.querySelector(".title_menu");
 			let child_elem = document.querySelector(".title_menu__setting");
 			parent_elem.removeChild(child_elem);
+			state = false;
 		}
+		return function () {
+			return state;
+		};
+	}
+	Game.dom_atr_toggle = function (atr, context) {
+		if(arguments.length <= 1) {
+			throw new Error("TypeError: 2 arguments required, Game.js");
+		}
+		let length = Game.dom_atr_toggle.length;
+		if(!Game.is_str(context)){
+			context = null;
+			length -= 1;
+		}
+
+		let args = slice.call(arguments, length);
+
+		if(context === "class" || context == null) {
+			for(let i = 0, length = args.length; i < length; i += 1){
+
+			}
+		}else if(context === "data") {
+			for(let i = 0, length = args.length; i < length; i += 1){
+				let is_atr = args[i].getAttribute(atr);
+				if(is_atr != null){
+					args[i].removeAttribute(atr);
+				}else{
+					args[i].setAttribute(atr, "currnet");
+				}
+			}
+		}
+	}
+	Game.change_state_by_dom = function (dom, atr) {
+		let state;
+		if(atr){
+			let currnet = dom.querySelector("[" + atr + "='currnet']");
+			state = currnet.getAttribute("data-state");
+		}else{
+			state = dom.getAttribute("data-state");
+		}
+		Game.store_game_state(state);
 	}
 })();

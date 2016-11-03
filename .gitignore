@@ -2,5 +2,6 @@
 static/
 node_modules/
 .browserify-cache
-*.txt,
+*.txt
 *.ttf
+.sass-cache

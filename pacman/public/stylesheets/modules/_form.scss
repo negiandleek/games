@@ -1,0 +1,20 @@
+.form-btn {
+	display: block;
+	margin: 0 auto;
+}
+
+[data-select]{
+	border: solid 4px $blue;
+	transition: ease .1s;
+	animation: vibration 2s infinite;
+}
+
+@keyframes vibration{
+	0%, 82%{transform: translate(0px, 0px) rotateZ(0deg)}
+	85%{transform: translate(1px, 1px) rotateZ(1deg)}
+	88%{transform: translate(0px, 1px) rotateZ(0deg)}
+	91%{transform: translate(1px, 1px) rotateZ(-1deg)}
+	94%{transform: translate(1px, 1px) rotateZ(1deg)}
+	97%{transform: translate(0px, 1px) rotateZ(0deg)}
+	100%{transform: translate(1px, 1px) rotateZ(-1deg)}
+}

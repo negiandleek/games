@@ -5,10 +5,14 @@ import "./game"
 	let root = self;
 	root.$ = {};
 	
+	$.dom = {};
+	$.canvases = {};
+	$.contexts = {};
 	$.w = 512;
 	$.h = 512;
 
 	window.addEventListener("DOMContentLoaded",()=>{
+			$.dom_store();
 			$.dom_loaded();
 	});
 
@@ -40,15 +44,11 @@ import "./game"
 		}
 		Game.store_canvases($.canvases);
 		Game.store_contexts($.contexts);
-		Game.render_middle();
 		// titleやstyleをセットする
-		Game.create_title_menu("FAKED PACMAN",$.w, $.h);
+		$.is_setting = Game.create_title_menu("FAKED PACMAN",$.w, $.h, true);
 
-		$.assets = Game.loading_and_progress(collections, 300);
+		$.assets = Game.loading_and_progress(collections, 300, $.operate_dom);
 	}
-
-	$.canvases = {};
-	$.contexts = {};
 
 	$.save_canvas = function (name) {
 		let args = Array.prototype.slice.call(arguments, $.save_canvas.length);
@@ -60,8 +60,47 @@ import "./game"
 		// 最も前にあるcanvasにのみイベントを付与
 		if(args.length){
 			for(let i = 0, length = args.length; i < length; i += 1){
-				$.canvases[name].addEventListener(args[i], Game[args[i]].call($.canvases[name], event))
+				$.canvases[name].addEventListener(args[i], ()=>{
+					Game[args[i]].call($.canvases[name], event)
+				})
 			}
+		}
+	}
+
+	$.dom_store = function () {
+		$.dom.ui = document.getElementById("ui");
+		$.dom.title_menu = document.querySelector(".title_menu");
+		$.dom.title_menu_header = $.dom.title_menu.children[0];
+		$.dom.title_menu_start = $.dom.title_menu.children[1];
+		$.dom.title_menu_setting = $.dom.title_menu.children[2];
+	}
+
+	// Game moduleで管理する
+	$.operate_dom = function () {
+		let state = Game.store_game_state.fetch();
+		console.log(state);
+		
+		if(state === "title_menu") {
+			setTimeout(()=>{
+				$.dom.title_menu_start.focus()
+			},0);
+			$.dom.title_menu.addEventListener("click", (e)=> {
+				e.stopPropagation();
+				Game.change_state_by_dom(e.target)
+			})
+			$.dom.title_menu.addEventListener("keydown", (e)=> {
+				let key_code = e.keyCode;
+				// up key 38
+				// down key 40
+				if(key_code === 38 || key_code === 40 && $.is_setting()){
+					Game.dom_atr_toggle("data-select", "data", $.dom.title_menu_start, $.dom.title_menu_setting);
+				}else if(key_code === 13){
+					Game.change_state_by_dom($.dom.title_menu, "data-select");
+				}else{
+					return false;
+				}
+			});
+			$.dom.title_menu.style.display = "block";
 		}
 	}
 }());
