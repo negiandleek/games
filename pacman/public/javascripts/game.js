@@ -6,6 +6,7 @@
 
 	// init variable
 	Game.assets = {};
+	Game.fps;
 
 	let Obj_proto = Object.prototype;
 	let Arr_proto = Array.prototype;
@@ -13,17 +14,18 @@
 	let toString = Obj_proto.toString;
 	let slice = Arr_proto.slice;
 	let call = Func_proto.call;
+	let request_animation_frame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+	let cansel_animation_frame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
 
 	Game.store_game_state = (function () {
 		// init, title_menu,loading, playing, gameover, continue_menu, setting
 		let state = "init";
 		
-		let stored_game_state = function(type, cb) {
-			if(Game.is_str(type)){
+		let stored_game_state = function(type) {
+			if(Game.is_str(type) && state !== type){
 				state = type;
-			}
-			if(Game.is_func(cb)){
-				cb();
+				Game.render_main(state);
 			}
 			return Game.store_game_state;
 		}
@@ -70,6 +72,11 @@
 	Game.is_func = function (obj) {
 		return typeof obj == "function" || false;
 	}
+
+	Game.is_num = function (obj) {
+		return toString.call(obj) === "[object Number]";
+	}
+
 
 	Game.extend = function(context, obj){
 		let astr = "[object Array]";
@@ -432,18 +439,54 @@
 		}
 		return Game.store_game_state(state).fetch();
 	}
-	Game.player = class {
-		constructor(img, x, y) {
-			this.img = img;
-			this.x = x;
-			this.y = y;	
+
+	Game.position = class {
+		constructor(x, y) {
+			Arr_proto.map.call(arguments, (value) => {
+				if(!Game.is_num(value)){
+					throw new Error("TypeError: arguments not type of Number, Game.js")
+				}
+			})
+
+			this.x = x || 16;
+			this.y = y || 16;
+		}
+	}
+
+	Game.Class = class {
+		on(){
+			// this.apply(this, arguments);
+		}
+	}
+
+	Game.player = class extends Game.Class{
+		constructor(width, height, constant) {
+			this.img;
 			this.speed;
 			this.size;
+			this.position = new Game.position();
+			if(constant == null || constant == "single"){
+				this.sprite_type = "single";
+			}else if(constant === "multiple"){
+				this.sprite_type = constant;
+			}else{
+				throw new Error("TypeError: constant is not type");
+			}
 		}
 		set(obj) {
 			if(Game.is_dict(obj)){
 				Game.extend(this, obj);
 			}
+		}
+	}
+
+	Game.render_main = function () {
+		let state = Game.store_game_state.fetch();
+		if(state === "playing"){
+			// 60 fps
+			Game.fps = request_animation_frame(Game.render_main);
+		}else{
+			cansel_animation_frame(Game.fps);
 		}
 	}
 })();
