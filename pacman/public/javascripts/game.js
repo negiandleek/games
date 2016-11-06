@@ -37,6 +37,9 @@
 	}());
 
 	let namespace = function (string) {
+		if(!Game.is_str(string)){
+			throw new Error("TypeError: arguments type not string");
+		}
 		let parts = string.split(".")
 		let parent = Game;
 
@@ -440,6 +443,51 @@
 		return Game.store_game_state(state).fetch();
 	}
 
+	namespace("Game.Event");
+
+	Game.Event.ENTER_FRAME = "enter_frame"
+
+	Game.Event = class {
+		constructor () {
+			this.__listners = {};
+		}
+		add_event_listner (type, listner) {
+			let ref = this.__listners[type];
+			if(ref == null){
+				this.__listners[type] = [{
+					name: listner.name || "nameless",
+					listner: listner
+				}];
+			}else if(ref.indexOf(listners) === -1){
+				let handler = {
+					name: listner.name || "nameless",
+					listner: listner
+				}
+				ref.unshift(handler);
+			}
+		}
+		remove_event_listner(type, listner){
+			let ref = this.__listners[type]
+			if(ref != null){
+				if(listner == null){
+					for(let i = 0, len = ref.length; i < len; i += 1){
+						if(ref[i].name === "nameless"){
+							ref.splice(i, 1);
+						}
+					}
+				}else{
+					let i = ref.indexOf(listner);
+					if(i !== -1){
+						ref.splice(i, 1);
+					}
+				}
+			}
+		}
+		on(){
+			this.add_event_listner.apply(this, arguments);
+		}
+	}
+
 	Game.position = class {
 		constructor(x, y) {
 			Arr_proto.map.call(arguments, (value) => {
@@ -453,13 +501,7 @@
 		}
 	}
 
-	Game.Class = class {
-		on(){
-			// this.apply(this, arguments);
-		}
-	}
-
-	Game.player = class extends Game.Class{
+	Game.player = class {
 		constructor(width, height, constant) {
 			this.img;
 			this.speed;
@@ -480,6 +522,7 @@
 		}
 	}
 
+	// enchant.js のcore classを参考にする
 	Game.render_main = function () {
 		let state = Game.store_game_state.fetch();
 		if(state === "playing"){
