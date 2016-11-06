@@ -87,6 +87,8 @@ import "./game"
 				$.dom.title_menu_start.focus()
 			},0);
 
+			// FIXED: 何回もイベントが登録される
+			// moduleで管理すれば解決する
 			$.dom.title_menu.addEventListener("click", (e)=> {
 				e.stopPropagation();
 				$.operate_game(Game.change_state_by_dom(e.target))
@@ -114,10 +116,19 @@ import "./game"
 			let field_csv = csvs.filed;
 
 			Game.render_back(state, dungeon_img, field_csv, img_point, canvas_point);
-			$.player = new Game.player(32, 32, "multiple");
+
+			$.core = new Game.Core();
+
+			$.player = new Game.Player(32, 32, "multiple");
 			$.player.img = images.player;
 			$.player.x = 16;
 			$.player.y = 16;
+			$.player.on("enter_frame", function (){
+			})
+
+			$.core.add($.player);
+
+			$.core.start();
 		}
 	}
 }());

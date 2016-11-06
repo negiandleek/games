@@ -25,7 +25,6 @@
 		let stored_game_state = function(type) {
 			if(Game.is_str(type) && state !== type){
 				state = type;
-				Game.render_main(state);
 			}
 			return Game.store_game_state;
 		}
@@ -328,10 +327,13 @@
 		}
 	}
 
-	let render_middle = function (context) {
+	let render_middle = function () {
 		let canvas = Game.canvas[1];
 		let ctx = Game.contexts[1];
 		let args = slice.call(arguments, 1);
+		if(this instanceof Game.Player){
+			ctx.drawImage(this.img, 0, 0, 32, 32, this.x, this.y, 32, 32);
+		}
 	}
 
 	let render_fore = function (context) {
@@ -443,13 +445,25 @@
 		return Game.store_game_state(state).fetch();
 	}
 
-	namespace("Game.Event");
-
-	Game.Event.ENTER_FRAME = "enter_frame"
 
 	Game.Event = class {
+		constructor(type) {
+			this.type = type;
+			this.target = null;
+			this.x;
+			this.y;
+		}
+	}
+	
+	Game.Event.ENTER_FRAME = "enter_frame";
+
+	Game.EventTarget = class extends Game.Event{
 		constructor () {
+			super();
 			this.__listners = {};
+		}
+		on(){
+			this.add_event_listner.apply(this, arguments);
 		}
 		add_event_listner (type, listner) {
 			let ref = this.__listners[type];
@@ -483,30 +497,86 @@
 				}
 			}
 		}
-		on(){
-			this.add_event_listner.apply(this, arguments);
-		}
-	}
-
-	Game.position = class {
-		constructor(x, y) {
-			Arr_proto.map.call(arguments, (value) => {
-				if(!Game.is_num(value)){
-					throw new Error("TypeError: arguments not type of Number, Game.js")
+		dispatch_event(e) {
+			e.target = this;
+			let ref = this.__listners[e.type];
+			if(ref != null){
+				for(let i = 0, len = ref.length; i < len; i += 1){
+					ref[i].listner.call(this, e);
 				}
-			})
-
-			this.x = x || 16;
-			this.y = y || 16;
+			}
 		}
 	}
 
-	Game.player = class {
+	Game.Core = class extends Game.EventTarget{
+		constructor() {
+			super();
+			this.frame = 0;
+			this.things = [];
+			this.previous = []
+			this.last = 0;
+			this.fps = 1000 / 60;
+			this.delayed = 0;
+			this.animation = null;
+		}
+		start() {
+			let now = new Date().getTime;
+			let diff = now - this.last;
+			
+			if(this.animation != null){
+				return;
+			}
+			
+			if(diff > 60 && now !== 0){
+				this.delayed = diff;
+			}
+			this.last = now;
+			this.frame = this.frame + 1;
+			this.main();
+		}
+		stop() {
+			cansel_animation_frame(this.animation);
+			this.animation
+		}
+		rewind() {
+			this.frame = 0;
+			this.last = new Date().getTime;
+		}
+		add(obj) {
+			if(Game.is_dict(obj)){
+				this.things.push(obj);
+			}
+		}
+		main(time){
+			let e = new Game.Event("enter_frame");
+			let things = this.things;
+			for(let i = 0, len = things.length; i < len; i += 1){
+				things[i].dispatch_event(e);
+				this.next_frame(things[i]);
+			}
+			this.animation = request_animation_frame(this.main.bind(this));
+		}
+		next_frame(obj) {
+			// TODO:things一つ前と比較（深く）する
+			// TODO:constructorによって処理を変える
+			if(this.previous !== this.things){
+				// if(this instanceof Player){
+				// 	ctx.drawImage(obj.img, 0, 0, 32, 32, obj.x, obj.y, 32, 32);
+				// }
+				render_middle.call(obj);
+			}
+			this.previous = this.things;
+		}
+	}
+
+	Game.Player = class extends Game.EventTarget{ 
 		constructor(width, height, constant) {
+			super();
 			this.img;
 			this.speed;
 			this.size;
-			this.position = new Game.position();
+			this.x;
+			this.y;
 			if(constant == null || constant == "single"){
 				this.sprite_type = "single";
 			}else if(constant === "multiple"){
@@ -519,17 +589,6 @@
 			if(Game.is_dict(obj)){
 				Game.extend(this, obj);
 			}
-		}
-	}
-
-	// enchant.js のcore classを参考にする
-	Game.render_main = function () {
-		let state = Game.store_game_state.fetch();
-		if(state === "playing"){
-			// 60 fps
-			Game.fps = request_animation_frame(Game.render_main);
-		}else{
-			cansel_animation_frame(Game.fps);
 		}
 	}
 })();
