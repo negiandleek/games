@@ -10,10 +10,11 @@ import "./game"
 	$.contexts = {};
 	$.w = 512;
 	$.h = 512;
-	$.core = new Game.Core(512, 512);
+
+	let sprt = Game.sprt;
 
 	window.addEventListener("DOMContentLoaded",()=>{
-			$.core.store_dom();
+			$.core = new Game.Core(512, 512);
 			let title_menu = new Game.Scene("title_menu",create_title_menu());
 			title_menu.on("change_scene", function (e) {
 				if($.core.state === "title_menu"){
@@ -25,6 +26,8 @@ import "./game"
 			$.core.add_scene(title_menu);
 
 			$.core.store_game_state("title_menu");
+
+			$.game = new Gmae.Game();
 	});
 
 	function create_title_menu() {
@@ -34,12 +37,12 @@ import "./game"
 		title_menu.push(title_menu[0].children[1]);
 		title_menu.push(title_menu[0].children[2]);
 		
-		title_menu[2].addEventListener("click", (e)=> {
+		title_menu[2].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
 			$.core.store_game_state("start");
 		})
 
-		title_menu[3].addEventListener("click", (e)=> {
+		title_menu[3].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
 			$.core.store_game_state("start");
 		})
@@ -60,29 +63,25 @@ import "./game"
 		return title_menu;
 	}
 
-	// $.dom_loaded = function () {
-	// 	let elems_tag = document.getElementsByTagName("canvas");
-	// 	let collections = Game.init_assets([
-	// 		{
-	// 			name: "player",
-	// 			type: "image",
-	// 			src: "./images/player.png"
-	// 		},{
-	// 			name: "dungeon",
-	// 			type: "image",
-	// 			src: "./images/dungeon.png"
-	// 		},{
-	// 			name: "field1",
-	// 			type: "xml",
-	// 			src: "./field1.xml"
-	// 		}
-	// 	]);
+	$.dom_loaded = function () {
+		let collections = Game.init_assets([
+			{
+				name: "player",
+				type: "image",
+				src: "./images/player.png"
+			},{
+				name: "dungeon",
+				type: "image",
+				src: "./images/dungeon.png"
+			},{
+				name: "field1",
+				type: "xml",
+				src: "./field1.xml"
+			}
+		]);
 
-	// 	titleやstyleをセットする
-	// 	$.is_setting = Game.create_title_menu("FAKED PACMAN", $.w, $.h);
-
-	// 	$.assets = Game.loading_and_progress(collections, 300, $.operate_game);
-	// }
+		// $.assets = Game.loading_and_progress(collections, 300, $.operate_game);
+	}
 
 // Game moduleで管理する
 // 	$.operate_game = function (context) {

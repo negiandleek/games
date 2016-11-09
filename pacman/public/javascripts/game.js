@@ -18,23 +18,6 @@
 		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
 	let cansel_animation_frame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
 
-	// Game.store_game_state = (function () {
-	// 	// init, title_menu,loading, playing, gameover, continue_menu, setting
-	// 	let state = "init";
-		
-	// 	let stored_game_state = function(type) {
-	// 		if(Game.is_str(type) && state !== type){
-	// 			state = type;
-	// 		}
-	// 		return Game.store_game_state;
-	// 	}
-
-	// 	stored_game_state.fetch = function() {
-	// 		return state;
-	// 	}
-	// 	return stored_game_state;
-	// }());
-
 	let namespace = function (string) {
 		if(!Game.is_str(string)){
 			throw new Error("TypeError: arguments type not string");
@@ -54,6 +37,27 @@
 		}
 		return parent;
 	};
+
+	Game.sprt = (function () {
+		let sprt = {};
+		
+		// canvasが対応しているか
+		let elem = document.createElement("canvas");
+		sprt.canvas = !!(elem.getContext && elem.getContext("2d"));
+
+		// タッチイベントが対応しているか
+		let sprt_touch = ("ontouchend" in window) || window.DocumentTouch && document instanceof DocumentTouch;
+		
+		sprt.TOUCH_START = sprt_touch ? "touchstart": "mousedown";
+		sprt.TOUCH_MOVE = sprt_touch ? "touchmove": "mousemove";
+		sprt.TOUCH_END = sprt_touch ? "touchend": "mouseup";
+
+		return sprt;
+	})();
+
+	Game.now = Date.now || function () {
+		return new Date().getTime();
+	}
 	
 	Game.is_str = function (obj) {
 		return toString.call(obj) === "[object String]";
@@ -221,6 +225,7 @@
 		}
 	};
 
+	//TODO: throttleだけ抽出したい
 	let progress_throttle = function (mill, len, cb) {
 		let call_times = 0;
 		let last_date = new Date().getTime();
@@ -257,6 +262,58 @@
 			}
 		}
 	};
+
+	Game.throttle = function (func, wait, repeat){
+		let context, args, result;
+		let timeout = [];
+		let calls = 1;
+		let previous = 0;
+
+		let throttled = function() {
+			let now = Game.now();
+			context = this;
+			args = arguments;
+
+			// if(repeat){
+			// 	calls += 1;
+			// }
+
+			function later() {
+				previous = Game.now();
+				result = func.apply(context, args);
+				timeout.shift();
+				// if(repeat){
+				// 	calls -= 1;
+				// }
+			}
+
+			let remaining = (wait * calls) - (now - previous)
+
+			if(remaining <= 0 || remaining > wait){
+				previous = now;
+				result = func.apply(context, args);
+				// if(repeat){
+				// 	calls -= 1;
+				}else if(timeout[0]){
+					clearTimeout(timeout[0]);
+					timeout.shift();
+				}
+			}else{
+				timeout.push(setTimeout(later, remaining));
+			}
+
+			return result;
+		}
+
+		throttled.cancel = function () {
+			for(let i = 0, len = i.length; i < len; i += 1){
+				clearTimeout(timeout[i]);
+				previous = 0;
+			}
+		}
+
+		return throttled;
+	}
 
 	Game.create_point = function (w, h, p_w, p_h) {
 	    let ix = 0;
@@ -491,9 +548,9 @@
 			this.h = h;
 			this.canvas = {};
 			this.context = {};
-		}
-		store_dom() {
-			let node = document.getElementById("interface");
+			this.node;
+			
+			let node = this.node = document.getElementById("interface");
 			let elems_tag = document.getElementsByTagName("canvas");
 
 			node.style.width = this.w + "px";
@@ -503,7 +560,6 @@
 				let id_name = elems_tag[i].id;
 				this.store_canvas(id_name);
 			}
-			return this;
 		}
 		store_canvas(name) {
 			this.canvas[name] = document.getElementById(name);
@@ -650,6 +706,9 @@
 			if(Game.is_dict(obj)){
 				this.things.push(obj);
 			}
+		}
+		load(){
+
 		}
 	}
 
