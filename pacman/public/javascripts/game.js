@@ -263,55 +263,58 @@
 		}
 	};
 
-	Game.throttle = function (func, wait, repeat){
-		let context, args, result;
+	Game.throttle_repeat = function (func, wait){
+		let result, args, context;
 		let timeout = [];
-		let calls = 1;
-		let previous = 0;
-
+		let remaining = 0;
+	    let total = 0;
+	    let previous = 0;
+	    let reset;
+	    
 		let throttled = function() {
-			let now = Game.now();
-			context = this;
-			args = arguments;
-
-			// if(repeat){
-			// 	calls += 1;
-			// }
-
-			function later() {
-				previous = Game.now();
-				result = func.apply(context, args);
-				timeout.shift();
-				// if(repeat){
-				// 	calls -= 1;
-				// }
-			}
-
-			let remaining = (wait * calls) - (now - previous)
-
-			if(remaining <= 0 || remaining > wait){
-				previous = now;
-				result = func.apply(context, args);
-				// if(repeat){
-				// 	calls -= 1;
-				}else if(timeout[0]){
-					clearTimeout(timeout[0]);
-					timeout.shift();
-				}
-			}else{
-				timeout.push(setTimeout(later, remaining));
-			}
-
-			return result;
-		}
-
-		throttled.cancel = function () {
-			for(let i = 0, len = i.length; i < len; i += 1){
-				clearTimeout(timeout[i]);
-				previous = 0;
-			}
-		}
-
+	    	let now = Date.now();
+	    	let cb;
+	    	context = this;
+	    	args = Array.prototype.slice.call(arguments);
+	    	for(let i = 0, len = args.length; i < len; i += 1){
+	    	  if(typeof args[i] === "function"){
+	    	    cb = Array.prototype.splice.call(args, i)[0];
+	    	  }
+	    	}
+	    	function reflesh(){
+	    	    previous = null;
+	    	    total = 0;
+	    	}
+	      
+	      	function later(param) {
+	      	    param = param ? param: args;
+	        		timeout.shift();
+	        		result = func.apply(context, param);
+	        		if(cb){
+	        		  cb(result)
+	        		}
+	        		console.log("a",result);
+	    	}
+	        
+	    	remaining = wait - (now - previous);
+	    	if(!previous && remaining < wait){
+	    	    previous = now;
+	    	    result = func.apply(context, args);
+	    	    if(cb){
+	      		  cb(result)
+	      		}
+	    	}else{
+	    	    total += remaining
+	    	    let timer = setTimeout(later.bind(context, args), total);
+	    	    timeout.push(timer);
+	    	    previous = now;
+	    	    if(reset){
+	    		    clearTimeout(reset);
+	    		  }
+	    	  	reset = setTimeout(reflesh, total + wait);
+	    	}
+	    	return result;
+	    }
 		return throttled;
 	}
 
