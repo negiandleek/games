@@ -12,10 +12,29 @@ import "./game"
 	$.h = 512;
 
 	let sprt = Game.sprt;
+	let collections = Game.init_assets([
+		{
+			name: "player",
+			type: "image",
+			src: "./images/player.png"
+		},{
+			name: "dungeon",
+			type: "image",
+			src: "./images/dungeon.png"
+		},{
+			name: "field1",
+			type: "xml",
+			src: "./field1.xml"
+		}
+	]);
+
+	$.core = new Game.Core(512, 512);
+	$.game = new Game.Game();
 
 	window.addEventListener("DOMContentLoaded",()=>{
-			$.core = new Game.Core(512, 512);
+			$.core.dom_loaded();
 			let title_menu = new Game.Scene("title_menu",create_title_menu());
+			
 			title_menu.on("change_scene", function (e) {
 				if($.core.state === "title_menu"){
 					this.dom[0].style.display = "block";
@@ -23,11 +42,9 @@ import "./game"
 					this.dom[0].style.display = "none";
 				}
 			})
+			
 			$.core.add_scene(title_menu);
-
 			$.core.store_game_state("title_menu");
-
-			$.game = new Gmae.Game();
 	});
 
 	function create_title_menu() {
@@ -40,11 +57,13 @@ import "./game"
 		title_menu[2].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
 			$.core.store_game_state("start");
+			start();
 		})
 
 		title_menu[3].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
 			$.core.store_game_state("start");
+			start();
 		})
 
 		title_menu[0].addEventListener("keydown", (e)=> {
@@ -57,60 +76,47 @@ import "./game"
 			}else if(key_code === 13){
 				//TODO: get attr
 				$.core.store_game_state("start");
+				start();
 			}
 		});
-
 		return title_menu;
 	}
 
-	$.dom_loaded = function () {
-		let collections = Game.init_assets([
-			{
-				name: "player",
-				type: "image",
-				src: "./images/player.png"
-			},{
-				name: "dungeon",
-				type: "image",
-				src: "./images/dungeon.png"
-			},{
-				name: "field1",
-				type: "xml",
-				src: "./field1.xml"
-			}
-		]);
-
-		// $.assets = Game.loading_and_progress(collections, 300, $.operate_game);
+	function start(){
+		$.game.load(collections, 300, function(result) {
+			$.core.store_game_state("loading");
+			$.core.render_fore("loading", result);
+		});
 	}
 
-// Game moduleで管理する
-// 	$.operate_game = function (context) {
-// 		let state = context || Game.store_game_state.fetch();
-// 		console.log(state);
+	// Game moduleで管理する
+	// 	$.operate_game = function (context) {
+	// 		let state = context || Game.store_game_state.fetch();
+	// 		console.log(state);
 
-// 		if(state === "playing"){
-// 			let images = $.assets.fetch_images();
-// 			let csvs = $.assets.fetch_csvs();
-// 			let img_point = Game.create_point(384, 160, 16, 16);
-// 			let canvas_point = Game.create_point(512, 512, 16, 16);
-// 			let dungeon_img = images.dungeon;
-// 			let field_csv = csvs.filed;
+	// 		if(state === "playing"){
+	// 			let images = $.assets.fetch_images();
+	// 			let csvs = $.assets.fetch_csvs();
+	// 			let img_point = Game.create_point(384, 160, 16, 16);
+	// 			let canvas_point = Game.create_point(512, 512, 16, 16);
+	// 			let dungeon_img = images.dungeon;
+	// 			let field_csv = csvs.filed;
 
-// 			Game.render_back(state, dungeon_img, field_csv, img_point, canvas_point);
+	// 			Game.render_back(state, dungeon_img, field_csv, img_point, canvas_point);
 
-// 			$.core = new Game.Core();
-// 			$.game = new Game.Game();
-// 			$.player = new Game.Player(32, 32, "multiple");
-// 			$.player.img = images.player;
-// 			$.player.x = 16;
-// 			$.player.y = 16;
-// 			$.player.on("enter_frame", function (){
-// 			})
+	// 			$.core = new Game.Core();
+	// 			$.game = new Game.Game();
+	// 			$.player = new Game.Player(32, 32, "multiple");
+	// 			$.player.img = images.player;
+	// 			$.player.x = 16;
+	// 			$.player.y = 16;
+	// 			$.player.on("enter_frame", function (){
+	// 			})
 
-// 			$.core.now($.game);
-// 			$.core.add($.player);
+	// 			$.core.now($.game);
+	// 			$.core.add($.player);
 
-// 			$.core.start();
-// 		}
-// 	}
+	// 			$.core.start();
+	// 		}
+	// 	}
 }());

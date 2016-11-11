@@ -129,92 +129,6 @@
 		return collections;
 	};
 
-	Game.loading_and_progress = function (col, mili, cb) {
-		let imgs_length = col.images.length;
-		let xml_length = col.xmls.length;
-		let time = mili || 0;
-
-		if(!Game.is_func(cb)){
-			cb = null;
-		}
-
-		let loaded = progress_throttle(time, imgs_length + xml_length, cb);
-		
-		loaded();
-		
-		let assets = {
-			images: {},
-			csv: {},
-			xhr: {},
-			fetch_images: function () {
-				return assets.images;
-			},
-			fetch_csvs: function () {
-				return assets.csv;
-			}
-		};
-
-		// load images
-		for(let i = 0; i < imgs_length; i += 1){
-			let item = col.images[i];
-			
-			assets.images[item.name] = new Image();
-			assets.images[item.name].src = item.src;
-			assets.images[item.name].onload = loaded();
-		}
-
-		// load xml;
-		for(let i = 0; i < xml_length; i += 1){
-			let item = col.xmls[i];
-
-			assets.xhr[item.name] = new XMLHttpRequest();
-			assets.xhr[item.name].onload = () => {
-				save_csv(assets.xhr[item.name].responseXML, item.name)
-				loaded();
-			};
-			assets.xhr[item.name].open("get", item.src, true);
-			assets.xhr[item.name].send();
-		}
-
-		// extract csv to xml;
-		let save_csv = function (text, prop) {
-			let elem_layer = text.querySelectorAll("layer");
-
-			for(let i = 0, length = elem_layer.length; i < length; i += 1){
-				let elem = elem_layer[i];
-				let name = elem.attributes.name.nodeValue;
-				let csv_str = elem.childNodes[1].innerHTML;
-
-				assets.csv[name] = parce_csv(name, csv_str);
-			}
-
-			delete assets.xhr.prop;
-		}
-
-		let parce_csv = function (name, text) {
-			assets.csv[name] = [];
-			let one_arr = text.split("\n");
-			let two_arr = [];
-
-			one_arr.shift();
-			one_arr.pop();
-
-			for(let i = 0, length = one_arr.length; i < length; i += 1) {
-				if(i !== length - 1){
-					one_arr[i] = one_arr[i].substring(0, one_arr[i].length - 1);
-				}
-				two_arr[i] = one_arr[i].split(",");
-				for(let j = 0, len = two_arr[i].length; j < len; j += 1){
-					// tiledのcsvは(0, 0)が1として扱われる
-					two_arr[i][j] = two_arr[i][j] - 1;
-				}
-			}
-			return two_arr;
-		}
-
-		return assets;
-	};
-
 	let store_progress = function (len) {
 		let i = 0;
 
@@ -222,44 +136,6 @@
 			let parcent = Math.floor((i / len) * 100);
 			i = i + 1;
 			return parcent;
-		}
-	};
-
-	//TODO: throttleだけ抽出したい
-	let progress_throttle = function (mill, len, cb) {
-		let call_times = 0;
-		let last_date = new Date().getTime();
-		// ロード時間の最小値
-		let load_min_time = 300;
-		let interval = 0;
-		let fetch_progress = store_progress(len);
-
-		interval = Math.max(mill, load_min_time) / len;
-
-		return progress_throttle = function (context) {
-			if(context != null && context !== false){
-				Game.assets[context] = this;
-			}
-			let now = new Date().getTime();
-			call_times += 1;
-			if(last_date + interval <= now){
-				while(call_times >= 1){
-					let parcent = fetch_progress();
-					last_date = now;
-					call_times -= 1;
-
-					render_fore("progress",parcent);
-
-					// 全て読み込み終えたら描画後にcallback関数を実行する
-					if(parcent === 100 && cb != null){
-						cb();
-					}
-					break;
-				}
-			}else{
-				let diff = now - (last_date + interval);
-				setTimeout(progress_throttle, diff);
-			}
 		}
 	};
 
@@ -293,7 +169,6 @@
 	        		if(cb){
 	        		  cb(result)
 	        		}
-	        		console.log("a",result);
 	    	}
 	        
 	    	remaining = wait - (now - previous);
@@ -366,43 +241,6 @@
 		}
 	}
 
-	// TODO:coreに埋め込む
-	let render_fore = function (context) {
-		let canvas = Game.canvas[2];
-		let ctx = Game.contexts[2];
-		let args = slice.call(arguments, 1);
-		if(context === "progress") {
-			Game.store_game_state("loading");
-
-			let w = 200;
-			let h = 50;
-			let x = (canvas.width / 2) - (w / 2);
-			let y = (canvas.height / 2) - (h / 2);
-			
-			// 初期化
-			ctx.clearRect(x, y, w, h);
-			ctx.strokeStyle = "rgba(33,150,243,1)";
-			ctx.fillStyle = "rgba(33,150,243,1)";
-			
-			// 枠を描く
-			ctx.beginPath();
-			ctx.strokeRect(x, y, w, h);
-
-			// 進捗分だけ色を塗りつぶす
-			let pg_w = w * (args[0] / 100);
-			ctx.fillRect(x, y, pg_w, h);
-			
-			if(args[0] === 100){
-				render_fore("title_menu");
-			}
-		}else if(context === "title_menu") {
-			Game.store_game_state("title_menu");
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-		}else if(context === "playing") {
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-		}
-	}
-
 	Game.create_title_menu = function (title, w, h, setting){
 		let state = true;
 
@@ -466,16 +304,6 @@
 		dom[index].removeAttribute(atr);
 		dom[next].setAttribute(atr, "currnet");
 	}
-	// Game.change_state_by_dom = function (dom, atr) {
-	// 	let state;
-	// 	if(atr){
-	// 		let currnet = dom.querySelector("[" + atr + "='currnet']");
-	// 		state = currnet.getAttribute("data-state");
-	// 	}else{
-	// 		state = dom.getAttribute("data-state");
-	// 	}
-	// 	return Game.store_game_state(state).fetch();
-	// }
 
 
 	Game.Event = class {
@@ -552,7 +380,15 @@
 			this.canvas = {};
 			this.context = {};
 			this.node;
-			
+		}
+		init(){
+			this.w = w;
+			this.h = h;
+			this.canvas = {};
+			this.context = {};
+			this.node;
+		}
+		dom_loaded() {
 			let node = this.node = document.getElementById("interface");
 			let elems_tag = document.getElementsByTagName("canvas");
 
@@ -578,11 +414,42 @@
 			}
 		}
 		render_middle() {
-			let canvas = this.canvas[1];
-			let ctx = this.contexts[1];
+			let canvas = this.canvas["middle"];
+			let ctx = this.context["middle"];
 			let args = slice.call(arguments, 1);
 			if(this instanceof Game.Player){
 				ctx.drawImage(this.img, 0, 0, 32, 32, this.x, this.y, 32, 32);
+			}
+		}
+		render_fore (type) {
+			let canvas = this.canvas.fore;
+			let ctx = this.context.fore;
+			let args = slice.call(arguments, 1);
+			if(type === "loading") {
+				let w = 200;
+				let h = 50;
+				let x = (canvas.width / 2) - (w / 2);
+				let y = (canvas.height / 2) - (h / 2);
+				
+				// 初期化
+				ctx.clearRect(x, y, w, h);
+				ctx.strokeStyle = "rgba(33,150,243,1)";
+				ctx.fillStyle = "rgba(33,150,243,1)";
+				
+				// 枠を描く
+				ctx.beginPath();
+				ctx.strokeRect(x, y, w, h);
+
+				// 進捗分だけ色を塗りつぶす
+				let pg_w = w * (args[0] / 100);
+				ctx.fillRect(x, y, pg_w, h);
+				
+				if(args[0] === 100){
+					this.store_game_state("palying");
+					this.render_fore("playing")
+				}
+			}else if(type === "playing") {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
 			}
 		}
 	}
@@ -631,6 +498,7 @@
 			this.last = new Date().getTime;
 			this.current_game = null;
 			this.root_scene = [];
+			super.init();
 		}
 		start() {
 			let now = new Date().getTime;
@@ -702,7 +570,7 @@
 			super()
 			this.stage;
 			this.level;
-			this.things = [];
+			this.things = {};
 		}
 		// 現在のゲームが管理するものを追加する
 		add(obj) {
@@ -710,8 +578,83 @@
 				this.things.push(obj);
 			}
 		}
-		load(){
+		static loaded_progress(wait, len) {
+			let fetch_progress = store_progress(len);
+			let t = Game.throttle_repeat(function() {
+				return fetch_progress()
+			}, wait);
 
+			return t;
+		}
+		load(col, wait, cb){
+			let imgs_len = col.images.length;
+			let xml_len = col.xmls.length;
+
+			let loaded = this.constructor.loaded_progress(wait, imgs_len + xml_len);
+			loaded(cb);
+
+			let assets = this.things
+			assets.images = {};
+			assets.csv = {};
+			assets.xhr = {};
+
+			// load images
+			for(let i = 0; i < imgs_len; i += 1){
+				let item = col.images[i];
+				
+				assets.images[item.name] = new Image();
+				assets.images[item.name].src = item.src;
+				assets.images[item.name].onload = loaded(cb);
+			}
+
+			// load xml;
+			for(let i = 0; i < xml_len; i += 1){
+				let item = col.xmls[i];
+
+				assets.xhr[item.name] = new XMLHttpRequest();
+				assets.xhr[item.name].onload = () => {
+					save_csv(assets.xhr[item.name].responseXML, item.name)
+					loaded(cb)
+				};
+				assets.xhr[item.name].open("get", item.src, true);
+				assets.xhr[item.name].send();
+			}
+
+			// extract csv to xml;
+			function save_csv(text, prop) {
+				let elem_layer = text.querySelectorAll("layer");
+
+				for(let i = 0, length = elem_layer.length; i < length; i += 1){
+					let elem = elem_layer[i];
+					let name = elem.attributes.name.nodeValue;
+					let csv_str = elem.childNodes[1].innerHTML;
+
+					assets.csv[name] = parse_xml_to_csv(name, csv_str);
+				}
+
+				delete assets.xhr.prop;
+			}
+
+			let parse_xml_to_csv = function (name, text) {
+				assets.csv[name] = [];
+				let one_arr = text.split("\n");
+				let two_arr = [];
+
+				one_arr.shift();
+				one_arr.pop();
+
+				for(let i = 0, length = one_arr.length; i < length; i += 1) {
+					if(i !== length - 1){
+						one_arr[i] = one_arr[i].substring(0, one_arr[i].length - 1);
+					}
+					two_arr[i] = one_arr[i].split(",");
+					for(let j = 0, len = two_arr[i].length; j < len; j += 1){
+						// tiledのcsvは(0, 0)が1として扱われる
+						two_arr[i][j] = two_arr[i][j] - 1;
+					}
+				}
+				return two_arr;
+			}
 		}
 	}
 
