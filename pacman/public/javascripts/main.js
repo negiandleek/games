@@ -8,7 +8,7 @@ import "./game"
 	$.dom = {};
 	$.canvases = {};
 	$.contexts = {};
-
+	$.last_touch_target;
 	let sprt = Game.sprt;
 	let collections = Game.init_assets([
 		{
@@ -31,15 +31,15 @@ import "./game"
 	$.core.add_game($.game);
 
 	window.addEventListener("DOMContentLoaded",()=>{
-		$.core.dom_loaded();
+		$.core.setup("touch_move", "touch_end", "key_up");
 		
 		// title menu用のシーンを作成する
 		let title_menu = new Game.Scene("title_menu",create_title_menu());
 		title_menu.on("change_scene", function (e) {
 			if($.core.state === "title_menu"){
-				this.dom[0].style.display = "block";
+				$.core.root_node.style.display = "block";
 			}else{
-				this.dom[0].style.display = "none";
+				$.core.root_node.style.display = "none";
 			}
 		})
 		
@@ -56,8 +56,12 @@ import "./game"
 			if(state === "loading"){
 				load(this.game_object);
 			}else if(state === "playing"){
-				render_filed($.game, this.w, this.h);
-				render_middle($.game);
+				let f = render_filed($.game, this.w, this.h);
+				$.core.render_back(f.img, f.csv, f.imgpt, f.canvas_pt);
+				
+				let p = render_player($.game);
+				$.game.add(p);
+				$.core.render_middle();
 			};
 		})
 	});
@@ -77,15 +81,21 @@ import "./game"
 		let img_point = Game.create_point(dungeon_img.width, dungeon_img.height, 16, 16);
 		let canvas_point = Game.create_point(w, h, 16, 16);
 
-		$.core.render_back("state", dungeon_img, field_csv, img_point, canvas_point);
+		return {
+			img: dungeon_img, 
+			csv: field_csv, 
+			imgpt: img_point, 
+			canvas_pt: canvas_point
+		};
 	}
 
-	// function render_middle(context) {
-	// 	$.player = new Game.Player(32, 32, "multiple");
-	// 	$.player.img = images.player;
-	// 	$.player.x = 16;
-	// 	$.player.y = 16;
-	// }
+	function render_player(context) {
+		let player = new Game.Player(32, 32, "multiple");
+		player.img = context.object.images.player;
+		player.x = 16;
+		player.y = 16;
+		return player
+	}
 
 	function create_title_menu() {
 		let title_menu = [];
@@ -93,6 +103,11 @@ import "./game"
 		title_menu.push(title_menu[0].children[0]);
 		title_menu.push(title_menu[0].children[1]);
 		title_menu.push(title_menu[0].children[2]);
+
+		$.core.root_node.addEventListener(sprt.TOUCH_START, (e) => {
+			$.last_touch_target = title_menu[0];
+			e.stopPropagation();
+		})
 		
 		title_menu[2].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
@@ -101,21 +116,24 @@ import "./game"
 
 		title_menu[3].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
-			$.core.store_game_state("loading");
+			$.core.store_game_state("setting");
 		})
 
-		title_menu[0].addEventListener("keydown", (e)=> {
-			let key_code = e.keyCode;
-			// up key 38 down key 40;
-			if(key_code === 38){
-				Game.atr_toggle("data-select", title_menu, "up");
-			}else if(key_code === 40){
-				Game.atr_toggle("data-select", title_menu, "down");
-			}else if(key_code === 13){
-				//TODO: get attr
-				$.core.store_game_state("loading");
+		document.addEventListener("keydown", (e)=> {
+			if($.last_touch_target === title_menu[0]){
+				let key_code = e.keyCode;
+				// up key 38 down key 40;
+				if(key_code === 38){
+					Game.atr_toggle("data-select", title_menu, "up");
+				}else if(key_code === 40){
+					Game.atr_toggle("data-select", title_menu, "down");
+				}else if(key_code === 13){
+					//TODO: get attr
+					$.core.store_game_state("loading");
+				}
 			}
 		});
+
 		return title_menu;
 	}
 }());

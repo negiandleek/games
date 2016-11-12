@@ -6,7 +6,56 @@
 
 	// init variable
 	Game.assets = {};
-	Game.fps;
+	Game.sprt = (function () {
+		let sprt = {};
+
+		// deviceの種類
+		let device_type = [ "desktop", "tablet", "mobile","other"];
+		let user_agent = (navigator.userAgent || navigator.vendor || window.opera || "").toLowerCase()
+
+		function detecter(agent) {
+			if(agent.indexOf("iphone") > -1){
+				return device_tpe[2];
+			}else if(agent.indexOf("ipad") > -1){
+				return device_type[1];
+			}else if((agent.indexOf('android') > -1) && (agent.indexOf('mobile') > -1)){
+				return device_type[2];
+			}else if((agent.indexOf('android') > -1) && (agent.indexOf('mobile') == -1)){
+				return device_type[1];
+			}else if((agent.indexOf('chrome') > -1) && (agent.indexOf('edge') == -1)){
+				return device_type[0];
+			}else if(agent.indexOf('firefox') > -1){
+				return device_type[0];
+			}else if((agent.indexOf('safari') > -1) && (agent.indexOf('chrome') == -1)){
+				return device_type[0];
+			}else if(agent.indexOf('opera') > -1){
+				return device_type[0];
+			}else{
+				return device_type[3];
+			}
+		}
+		sprt.device = detecter(user_agent);
+		// canvasが対応しているか
+		let elem = document.createElement("canvas");
+		sprt.canvas = !!(elem.getContext && elem.getContext("2d"));
+
+		// タッチイベントが対応しているか
+		let sprt_touch = ("ontouchend" in window) || window.DocumentTouch && document instanceof DocumentTouch;
+		
+		sprt.TOUCH_START = sprt_touch ? "touchstart": "mousedown";
+		sprt.TOUCH_MOVE = sprt_touch ? "touchmove": "mousemove";
+		sprt.TOUCH_END = sprt_touch ? "touchend": "mouseup";
+
+		sprt.game_events = {
+			touch_start: sprt.TOUCH_START,
+			touch_move: sprt.TOUCH_MOVE,
+			touch_end: sprt.TOUCH_END,
+			key_down: "keydown", 
+			key_up: "keyup"
+		};
+
+		return sprt;
+	})();
 
 	let Obj_proto = Object.prototype;
 	let Arr_proto = Array.prototype;
@@ -17,7 +66,6 @@
 	let request_animation_frame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
 		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
 	let cansel_animation_frame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
-
 	let namespace = function (string) {
 		if(!Game.is_str(string)){
 			throw new Error("TypeError: arguments type not string");
@@ -37,23 +85,6 @@
 		}
 		return parent;
 	};
-
-	Game.sprt = (function () {
-		let sprt = {};
-		
-		// canvasが対応しているか
-		let elem = document.createElement("canvas");
-		sprt.canvas = !!(elem.getContext && elem.getContext("2d"));
-
-		// タッチイベントが対応しているか
-		let sprt_touch = ("ontouchend" in window) || window.DocumentTouch && document instanceof DocumentTouch;
-		
-		sprt.TOUCH_START = sprt_touch ? "touchstart": "mousedown";
-		sprt.TOUCH_MOVE = sprt_touch ? "touchmove": "mousemove";
-		sprt.TOUCH_END = sprt_touch ? "touchend": "mouseup";
-
-		return sprt;
-	})();
 
 	Game.now = Date.now || function () {
 		return new Date().getTime();
@@ -212,38 +243,6 @@
 	    return point;
 	}
 
-	Game.create_title_menu = function (title, w, h, setting){
-		let state = true;
-
-		if(title == null) {
-			throw new Error("TypeError: title is not defined, Game.js");
-		}
-		if(arguments.length < 3){
-			throw new Error("TypeError: 3 arguments required, Game.js");
-		}
-
-		let ui = document.getElementById("ui");
-		ui.style.width = w + "px";
-		ui.style.height = h + "px";
-
-
-		let h1 = document.querySelector(".title_menu__header > h1");
-		h1.textContent = title;
-
-		if(setting == null){
-			setting = false;
-		}
-
-		if(Game.is_bool(setting) && setting === false){
-			let parent_elem = document.querySelector(".title_menu");
-			let child_elem = document.querySelector(".title_menu__setting");
-			parent_elem.removeChild(child_elem);
-			state = false;
-		}
-		return function () {
-			return state;
-		};
-	}
 	Game.atr_toggle = function (atr, dom, context) {
 		if(arguments.length <= 0) {
 			throw new Error("TypeError: 1 arguments required, Game.js");
@@ -276,6 +275,37 @@
 		dom[next].setAttribute(atr, "currnet");
 	}
 
+	Game.merge_instance = function() {
+		let m = {};
+		let args = arguments;
+		for(let i = 0, len = args.length; i < len; i += 1){
+			let t = {};
+			let own = {}
+			let class_name;
+			if(!Game.is_dict(args[i])){
+				throw new Error("TypeError: arguments is not object, Game.js");
+				break;
+			}
+
+			for(let key in args[i]){
+				if(args[i].hasOwnProperty(key)){
+					if(key !== "__listners" && key !== "img"){
+						t[key] = args[i][key];
+					}
+				}
+			}
+			class_name = args[i].constructor.name.toLowerCase();
+			own[class_name] = [];
+			own[class_name].push(t);
+			m = Object.assign(m, own);
+		}
+		return m;
+	}
+
+	Game.detect_diff = function (previous, now){
+
+	}
+
 
 	Game.Event = class {
 		constructor(type) {
@@ -289,8 +319,14 @@
 		}
 	}
 	
+	// event type list
 	Game.Event.ENTER_FRAME = "enter_frame";
 	Game.Event.CHANGE_SCENE = "change_scene";
+	Game.Event.TOUCH_START = "touch_start";
+	Game.Event.TOUCH_MOVE = "touch_move";
+	Game.Event.TOUCH_END = "touch_end";
+	Game.Event.KEY_DOWN = "key_down";
+	Game.Event.KEY_UP = "key_up";
 
 	Game.EventTarget = class extends Game.Event{
 		constructor () {
@@ -348,23 +384,23 @@
 			super();
 			this.w = w;
 			this.h = h;
-			this.canvas = {};
-			this.context = {};
-			this.node;
+			this.canvas = [];
+			this.context = [];
+			this.root_node;
+			this.cache_middle;
 		}
 		init(){
 			this.w = w;
 			this.h = h;
-			this.canvas = {};
-			this.context = {};
-			this.node;
+			this.canvas = [];
+			this.context = [];
+			this.root_node;
 		}
-		dom_loaded() {
-			let node = this.node = document.getElementById("interface");
+		store_dom() {
+			let root_node = this.root_node = document.getElementById("interface");
 			let elems_tag = document.getElementsByTagName("canvas");
-
-			node.style.width = this.w + "px";
-			node.style.height = this.h + "px";
+			root_node.style.width = this.w + "px";
+			root_node.style.height = this.h + "px";
 
 			for(let i = 0, length = elems_tag.length; i < length; i += 1){
 				let id_name = elems_tag[i].id;
@@ -372,22 +408,15 @@
 			}
 		}
 		store_canvas(name) {
-			this.canvas[name] = document.getElementById(name);
-			this.canvas[name].width = this.w;
-			this.canvas[name].height = this.h;
-			this.context[name] = this.canvas[name].getContext("2d");
-		}
-		store_contexts(dict) {
-			if(Game.is_dict(dict)){
-				for(let key in dict) {
-					this.context.push(dict[key]);
-				}
-			}
+			let len = this.canvas.push(document.getElementById(name)) - 1;
+			this.canvas[len].width = this.w;
+			this.canvas[len].height = this.h;
+			this.context.push(this.canvas[len].getContext("2d"));
 		}
 		render_back() {
-			let canvas = this.canvas["back"];
-			let ctx = this.context["back"];
-			let args = slice.call(arguments, 1);
+			let canvas = this.canvas[0];
+			let ctx = this.context[0];
+			let args = arguments;
 			if(this.state === "playing"){
 				let csv = args[1];
 				let img_point = args[2];
@@ -406,17 +435,40 @@
 				ctx.drawImage(args[0], img_p.x, img_p.y, w, h, can_p.x, can_p.y, w, h);
 			}
 		}
+		static diff_middle(object) {
+			if(!this.cache_middle){
+				let t = {};
+				let r = [];
+				this.cache_middle = object;
+				for(let key in object){
+					t[key] = object[key];
+					r.push(t);
+				}
+				return r;
+			}
+		}
 		render_middle() {
-			let canvas = this.canvas["middle"];
-			let ctx = this.context["middle"];
+			let canvas = this.canvas[1];
+			let ctx = this.context[1];
 			let args = slice.call(arguments, 1);
-			if(this instanceof Game.Player){
-				ctx.drawImage(this.img, 0, 0, 32, 32, this.x, this.y, 32, 32);
+			let player = this.game_object.player[0];
+			let merged = Game.merge_instance(player);
+			let diff_key = this.constructor.diff_middle(merged);
+			
+			let len = diff_key.length;
+			if(len !== 0){
+				for(let i = 0; i < len; i += 1){
+					for(let key in diff_key[i]){
+						if(key === "player"){
+							ctx.drawImage(player.img, 0, 0, 32, 32, player.x, player.y, 32, 32);
+						}
+					}
+				}
 			}
 		}
 		render_fore () {
-			let canvas = this.canvas.fore;
-			let ctx = this.context.fore;
+			let canvas = this.canvas[2];
+			let ctx = this.context[2];
 			let args = slice.call(arguments, 0);
 			if(this.state === "loading") {
 				let w = 200;
@@ -458,17 +510,82 @@
 			this.delayed = 0;
 			this.animation = null;
 			this.game_object = [];
-			this.root_scene_object = [];
+			this.scene_object = [];
 			this.state = "init";
+			this.last_touch_target
+			this.running = false;
+
+			// document.addEventListener(Game.sprt.TOUCH_START, (e) => {
+			// 	this.last_touch_target = e.target;
+			// })
 		}
-		// init, title_menu,loading, playing, gameover, continue_menu, setting
+		setup() {
+			let events = Object.assign({},Game.sprt.game_events);
+			let len = arguments.length;
+			super.store_dom();
+
+			if(!this.canvas[2]){
+				throw new Error("ReferenceError: canvas[2] is not defined, Game.js");
+			}
+			if(len !== 0){
+				for(let i = 0; i < len; i += 1){
+					for(let key in events){
+						if(key === arguments[i]){
+							delete events[key];
+						}
+					}
+				}
+			}
+			
+			for(let key in events){
+				if(key === "touch_start"){
+					this.canvas[2].addEventListener(events[key], (e) => {
+						this.dispatch_event(new Game.Event("touch_start"));
+						e.preventDefault();
+						e.stopPropagation();
+					});
+				}else if(key === "touch_move"){
+					this.canvas[2].addEventListener(events[key], (e) => {
+						this.dispatch_event(new Game.Event("touch_move"));
+						e.preventDefault();
+						e.stopPropagation();
+					});
+				}else if(key === "touch_end"){
+					this.canvas[2].addEventListener(events[key], (e) => {
+						this.dispatch_event(new Game.Event("touch_end"));
+						e.preventDefault();
+						e.stopPropagation();
+					});
+				}else if(key === "key_down"){
+					document.addEventListener(events[key], (e) => {
+						if(!this.running) {
+							return;
+						}
+						this.dispatch_event(new Game.Event("key_down"));
+						e.preventDefault();
+						e.stopPropagation();
+					});
+				}else if(key === "key_up"){
+					document.addEventListener(events[key], (e) => {
+						if(!this.running){
+							return;
+						}
+
+						this.dispatch_event(new Game.Event("key_up"));
+						e.preventDefault();
+						e.stopPropagation();
+					});
+				}
+			}
+		}
+		// init, title_menu,loading, paly, gameover, continue_menu, setting
 		store_game_state(type) {
 			// coreのstateが変わったらchange_sceneイベントを発行する
 			if(Game.is_str(type) && this.state !== type){
 				this.state = type;
 				let e = new Game.Event("change_scene");
 				let things = this.game_object;
-				let scenes = this.root_scene_object;
+				let scenes = this.scene_object;
 
 				this.dispatch_event(e);
 
@@ -481,8 +598,13 @@
 					scenes[i].dispatch_event(e);
 					// this.next_fore_frame(scenes[i]);
 				}
+			
+				if(type === "playing"){
+					this.running = true;
+				}else{
+					this.running = false;
+				}
 			}
-			return this;
 		}
 		fetch_state() {
 			return this.state;
@@ -492,7 +614,7 @@
 			this.frame = 0;
 			this.last = new Date().getTime;
 			this.game_object = null;
-			this.root_scene_object = [];
+			this.scene_object = [];
 			super.init();
 		}
 		start() {
@@ -525,8 +647,8 @@
 			}
 		}
 		add_scene(obj){
-			if(Game.is_dict(obj) && obj !== this.root_scene_object){
-				this.root_scene_object.push(obj);
+			if(Game.is_dict(obj) && obj !== this.scene_object){
+				this.scene_object.push(obj);
 			}
 		}
 		main(time){
@@ -560,18 +682,23 @@
 		}
 	}
 
+	// 現在のゲームが使用するオブジェクトを管理する
+	// 例えばステージ1-2
 	Game.Game = class extends Game.EventTarget{
 		constructor(){
 			super()
 			this.stage;
 			this.level;
-			this.object = {};
+			this.object = [];
+			this.player = [];
 			// this.progress;
 		}
 		// 現在のゲームが管理するものを追加する
 		add(obj) {
 			if(Game.is_dict(obj)){
-				this.object.push(obj);
+				if(obj instanceof Game.Player){
+					this.player.push(obj);
+				}
 			}
 		}
 		static loaded_progress(wait, len) {
@@ -654,7 +781,33 @@
 		}
 	}
 
-	Game.Player = class extends Game.Game{ 
+	Game.Player = class Player extends Game.EventTarget{ 
+		constructor(width, height, constant) {
+			super();
+			// スプライトを変更する時などに用いる
+			this.change = false;
+			this.img;
+			this.life;
+			this.speed;
+			this.size;
+			this.x;
+			this.y;
+			if(constant == null || constant == "single"){
+				this.sprite_type = "single";
+			}else if(constant === "multiple"){
+				this.sprite_type = constant;
+			}else{
+				throw new Error("TypeError: constant is not type");
+			}
+		}
+		set(obj) {
+			if(Game.is_dict(obj)){
+				Game.extend(this, obj);
+			}
+		}
+	}
+
+	Game.Enemy = class Enemy extends Game.EventTarget{
 		constructor(width, height, constant) {
 			super();
 			this.img;
@@ -678,31 +831,7 @@
 		}
 	}
 
-	Game.Enemy = class extends Game.Game{
-		constructor(width, height, constant) {
-			super();
-			this.img;
-			this.life;
-			this.speed;
-			this.size;
-			this.x;
-			this.y;
-			if(constant == null || constant == "single"){
-				this.sprite_type = "single";
-			}else if(constant === "multiple"){
-				this.sprite_type = constant;
-			}else{
-				throw new Error("TypeError: constant is not type");
-			}
-		}
-		set(obj) {
-			if(Game.is_dict(obj)){
-				Game.extend(this, obj);
-			}
-		}
-	}
-
-	Game.Item = class extends Game.Game{
+	Game.Item = class Item extends Game.EventTarget{
 		constructor(width, height) {
 			super();
 			this.img;
