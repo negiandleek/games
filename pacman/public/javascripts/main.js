@@ -8,8 +8,6 @@ import "./game"
 	$.dom = {};
 	$.canvases = {};
 	$.contexts = {};
-	$.w = 512;
-	$.h = 512;
 
 	let sprt = Game.sprt;
 	let collections = Game.init_assets([
@@ -28,24 +26,66 @@ import "./game"
 		}
 	]);
 
-	$.core = new Game.Core(512, 512);
 	$.game = new Game.Game();
+	$.core = new Game.Core(512, 512);
+	$.core.add_game($.game);
 
 	window.addEventListener("DOMContentLoaded",()=>{
-			$.core.dom_loaded();
-			let title_menu = new Game.Scene("title_menu",create_title_menu());
-			
-			title_menu.on("change_scene", function (e) {
-				if($.core.state === "title_menu"){
-					this.dom[0].style.display = "block";
-				}else{
-					this.dom[0].style.display = "none";
-				}
-			})
-			
-			$.core.add_scene(title_menu);
-			$.core.store_game_state("title_menu");
+		$.core.dom_loaded();
+		
+		// title menu用のシーンを作成する
+		let title_menu = new Game.Scene("title_menu",create_title_menu());
+		title_menu.on("change_scene", function (e) {
+			if($.core.state === "title_menu"){
+				this.dom[0].style.display = "block";
+			}else{
+				this.dom[0].style.display = "none";
+			}
+		})
+		
+		// coreにtitle menuシーンを追加
+		$.core.add_scene(title_menu);
+
+		// タイトル画面を表示するためのstate
+		$.core.store_game_state("title_menu");
+
+		// シーンが変わった時のイベントを追加
+		$.core.on("change_scene", function(e){
+			let state = e.target.state;
+			console.log(state);
+			if(state === "loading"){
+				load(this.game_object);
+			}else if(state === "playing"){
+				render_filed($.game, this.w, this.h);
+				render_middle($.game);
+			};
+		})
 	});
+
+	function load(context){
+		context.load(collections, 300, function(result) {
+			$.core.store_game_state("loading");
+			$.core.render_fore(result);
+		});
+	}
+
+	function render_filed(context, w, h) {
+		let images = context.object.images;
+		let csves = context.object.csves;
+		let dungeon_img = images.dungeon;
+		let field_csv = csves.filed;
+		let img_point = Game.create_point(dungeon_img.width, dungeon_img.height, 16, 16);
+		let canvas_point = Game.create_point(w, h, 16, 16);
+
+		$.core.render_back("state", dungeon_img, field_csv, img_point, canvas_point);
+	}
+
+	// function render_middle(context) {
+	// 	$.player = new Game.Player(32, 32, "multiple");
+	// 	$.player.img = images.player;
+	// 	$.player.x = 16;
+	// 	$.player.y = 16;
+	// }
 
 	function create_title_menu() {
 		let title_menu = [];
@@ -56,14 +96,12 @@ import "./game"
 		
 		title_menu[2].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
-			$.core.store_game_state("start");
-			start();
+			$.core.store_game_state("loading");
 		})
 
 		title_menu[3].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
-			$.core.store_game_state("start");
-			start();
+			$.core.store_game_state("loading");
 		})
 
 		title_menu[0].addEventListener("keydown", (e)=> {
@@ -75,48 +113,10 @@ import "./game"
 				Game.atr_toggle("data-select", title_menu, "down");
 			}else if(key_code === 13){
 				//TODO: get attr
-				$.core.store_game_state("start");
-				start();
+				$.core.store_game_state("loading");
 			}
 		});
 		return title_menu;
 	}
-
-	function start(){
-		$.game.load(collections, 300, function(result) {
-			$.core.store_game_state("loading");
-			$.core.render_fore("loading", result);
-		});
-	}
-
-	// Game moduleで管理する
-	// 	$.operate_game = function (context) {
-	// 		let state = context || Game.store_game_state.fetch();
-	// 		console.log(state);
-
-	// 		if(state === "playing"){
-	// 			let images = $.assets.fetch_images();
-	// 			let csvs = $.assets.fetch_csvs();
-	// 			let img_point = Game.create_point(384, 160, 16, 16);
-	// 			let canvas_point = Game.create_point(512, 512, 16, 16);
-	// 			let dungeon_img = images.dungeon;
-	// 			let field_csv = csvs.filed;
-
-	// 			Game.render_back(state, dungeon_img, field_csv, img_point, canvas_point);
-
-	// 			$.core = new Game.Core();
-	// 			$.game = new Game.Game();
-	// 			$.player = new Game.Player(32, 32, "multiple");
-	// 			$.player.img = images.player;
-	// 			$.player.x = 16;
-	// 			$.player.y = 16;
-	// 			$.player.on("enter_frame", function (){
-	// 			})
-
-	// 			$.core.now($.game);
-	// 			$.core.add($.player);
-
-	// 			$.core.start();
-	// 		}
-	// 	}
 }());
+

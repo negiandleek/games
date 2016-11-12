@@ -212,35 +212,6 @@
 	    return point;
 	}
 
-	// TODO:coreに埋め込む
-	Game.render_back = function (context) {
-		let canvas = Game.canvas[0];
-		let ctx = Game.contexts[0];
-		let args = slice.call(arguments, 1);
-		
-		if(context == null){
-			throw new Error("TypeError: context is not defined, Game.js");
-		}
-
-		if(context === "playing"){
-			let csv = args[1];
-			let img_point = args[2];
-			let canvas_point = args[3];
-			let index = 0;
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			
-			for(let i = 0, len = csv.length; i < len; i += 1){
-				for(let j = 0, _len = csv[i].length; j < _len; j += 1){
-					render(img_point[csv[i][j]], canvas_point[index],16, 16);
-					index = index + 1;
-				}
-			}
-		}
-		function render(img_p, can_p, w, h) {
-			ctx.drawImage(args[0], img_p.x, img_p.y, w, h, can_p.x, can_p.y, w, h);
-		}
-	}
-
 	Game.create_title_menu = function (title, w, h, setting){
 		let state = true;
 
@@ -308,7 +279,7 @@
 
 	Game.Event = class {
 		constructor(type) {
-			this.type = type;
+			this.type = type || null;
 			this.target = null;
 			this.x;
 			this.y;
@@ -366,7 +337,7 @@
 			let ref = this.__listners[e.type];
 			if(ref != null){
 				for(let i = 0, len = ref.length; i < len; i += 1){
-					ref[i].listner.apply(this);
+					ref[i].listner.call(this, e);
 				}
 			}
 		}
@@ -413,6 +384,28 @@
 				}
 			}
 		}
+		render_back() {
+			let canvas = this.canvas["back"];
+			let ctx = this.context["back"];
+			let args = slice.call(arguments, 1);
+			if(this.state === "playing"){
+				let csv = args[1];
+				let img_point = args[2];
+				let canvas_point = args[3];
+				let index = 0;
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				
+				for(let i = 0, len = csv.length; i < len; i += 1){
+					for(let j = 0, _len = csv[i].length; j < _len; j += 1){
+						render(img_point[csv[i][j]], canvas_point[index],16, 16);
+						index = index + 1;
+					}
+				}
+			}
+			function render(img_p, can_p, w, h) {
+				ctx.drawImage(args[0], img_p.x, img_p.y, w, h, can_p.x, can_p.y, w, h);
+			}
+		}
 		render_middle() {
 			let canvas = this.canvas["middle"];
 			let ctx = this.context["middle"];
@@ -421,11 +414,11 @@
 				ctx.drawImage(this.img, 0, 0, 32, 32, this.x, this.y, 32, 32);
 			}
 		}
-		render_fore (type) {
+		render_fore () {
 			let canvas = this.canvas.fore;
 			let ctx = this.context.fore;
-			let args = slice.call(arguments, 1);
-			if(type === "loading") {
+			let args = slice.call(arguments, 0);
+			if(this.state === "loading") {
 				let w = 200;
 				let h = 50;
 				let x = (canvas.width / 2) - (w / 2);
@@ -445,10 +438,11 @@
 				ctx.fillRect(x, y, pg_w, h);
 				
 				if(args[0] === 100){
-					this.store_game_state("palying");
-					this.render_fore("playing")
+					this.store_game_state("playing");
+					this.render_fore()
 				}
-			}else if(type === "playing") {
+
+			}else if(this.state === "playing") {
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
 			}
 		}
@@ -458,14 +452,13 @@
 		constructor(w, h) {
 			super(w, h);
 			this.frame = 0;
-			// this.things = [];
 			this.previous = [];
 			this.last = 0;
 			this.fps = 1000 / 60;
 			this.delayed = 0;
 			this.animation = null;
-			this.current_game = [];
-			this.root_scene = [];
+			this.game_object = [];
+			this.root_scene_object = [];
 			this.state = "init";
 		}
 		// init, title_menu,loading, playing, gameover, continue_menu, setting
@@ -474,8 +467,10 @@
 			if(Game.is_str(type) && this.state !== type){
 				this.state = type;
 				let e = new Game.Event("change_scene");
-				let things = this.current_game;
-				let scenes = this.root_scene;
+				let things = this.game_object;
+				let scenes = this.root_scene_object;
+
+				this.dispatch_event(e);
 
 				for(let i = 0, len = things.length; i < len; i += 1){
 					things[i].dispatch_event(e);
@@ -496,8 +491,8 @@
 			this.state = this.store_game_state("init");
 			this.frame = 0;
 			this.last = new Date().getTime;
-			this.current_game = null;
-			this.root_scene = [];
+			this.game_object = null;
+			this.root_scene_object = [];
 			super.init();
 		}
 		start() {
@@ -522,21 +517,21 @@
 		rewind() {
 			this.frame = 0;
 			this.last = new Date().getTime;
-			this.current_game = null;
+			this.game_object = null;
 		}
 		add_game(obj) {
-			if(Game.is_dict(obj) && obj !== this.current_game){
-				this.current_game = obj;
+			if(Game.is_dict(obj) && obj !== this.game_object){
+				this.game_object = obj;
 			}
 		}
 		add_scene(obj){
-			if(Game.is_dict(obj) && obj !== this.root_scene){
-				this.root_scene.push(obj);
+			if(Game.is_dict(obj) && obj !== this.root_scene_object){
+				this.root_scene_object.push(obj);
 			}
 		}
 		main(time){
 			let e = new Game.Event("enter_frame");
-			let things = this.current_game.things;
+			let things = this.game_object.things;
 			for(let i = 0, len = things.length; i < len; i += 1){
 				things[i].dispatch_event(e);
 				this.next_middle_frame(things[i]);
@@ -570,12 +565,13 @@
 			super()
 			this.stage;
 			this.level;
-			this.things = {};
+			this.object = {};
+			// this.progress;
 		}
 		// 現在のゲームが管理するものを追加する
 		add(obj) {
 			if(Game.is_dict(obj)){
-				this.things.push(obj);
+				this.object.push(obj);
 			}
 		}
 		static loaded_progress(wait, len) {
@@ -593,9 +589,9 @@
 			let loaded = this.constructor.loaded_progress(wait, imgs_len + xml_len);
 			loaded(cb);
 
-			let assets = this.things
+			let assets = this.object
 			assets.images = {};
-			assets.csv = {};
+			assets.csves = {};
 			assets.xhr = {};
 
 			// load images
@@ -629,14 +625,14 @@
 					let name = elem.attributes.name.nodeValue;
 					let csv_str = elem.childNodes[1].innerHTML;
 
-					assets.csv[name] = parse_xml_to_csv(name, csv_str);
+					assets.csves[name] = parse_xml_to_csv(name, csv_str);
 				}
 
 				delete assets.xhr.prop;
 			}
 
 			let parse_xml_to_csv = function (name, text) {
-				assets.csv[name] = [];
+				assets.csves[name] = [];
 				let one_arr = text.split("\n");
 				let two_arr = [];
 
