@@ -275,35 +275,70 @@
 		dom[next].setAttribute(atr, "currnet");
 	}
 
-	Game.merge_instance = function() {
-		let m = {};
-		let args = arguments;
-		for(let i = 0, len = args.length; i < len; i += 1){
-			let t = {};
-			let own = {}
-			let class_name;
-			if(!Game.is_dict(args[i])){
-				throw new Error("TypeError: arguments is not object, Game.js");
-				break;
-			}
+	// Game.merge_instance = function() {
+	// 	let m = {};
+	// 	let args = arguments;
+	// 	for(let i = 0, len = args.length; i < len; i += 1){
+	// 		let t = {};
+	// 		let own = {}
+	// 		let class_name;
+	// 		if(!Game.is_dict(args[i])){
+	// 			throw new Error("TypeError: arguments is not object, Game.js");
+	// 			break;
+	// 		}
+	// 		// console.log(args[i]);
+	// 		for(let key in args[i]){
+	// 			if(args[i].hasOwnProperty(key)){
+	// 				if(key !== "__listners" && key !== "img"){
+	// 					t[key] = args[i][key];
+	// 				}
+	// 			}
+	// 		}
+	// 		class_name = args[0].constructor.name.toLowerCase();
+	// 		console.log(class_name);
+	// 		own[class_name] = [];
+	// 		own[class_name].push(t);
+	// 		m = Object.assign(m, own);
+	// 	}
+	// 	return m;
+	// }
 
-			for(let key in args[i]){
-				if(args[i].hasOwnProperty(key)){
-					if(key !== "__listners" && key !== "img"){
-						t[key] = args[i][key];
+	Game.detect_diff = function (previous, now){
+		let r = [];
+
+		for(let key in now){
+			if(!this.previous[key]){
+				r.push(key);
+				continue;
+			}else{
+				let len = now[key].length;
+				// 配列の長さが違う
+				if(now[key].length !== previous[key].length){
+					r.push(key);
+					continue;
+				}else{
+					let bl = before.length;
+					let al = after.length;
+					for(let i = 0; i < bl; i += 1){
+						let jb = JSON.stringfy(before[i]);
+						let ja = JSON.stringfy(after[i]);
+						if(jb !== ja){
+							r.push(key);
+							break;
+						}
 					}
 				}
 			}
-			class_name = args[i].constructor.name.toLowerCase();
-			own[class_name] = [];
-			own[class_name].push(t);
-			m = Object.assign(m, own);
 		}
-		return m;
-	}
 
-	Game.detect_diff = function (previous, now){
+		for(let key in previous){
+			if(!now[key]){
+				r.push(key);
+			}
+		}
 
+		console.log(r);
+		return r;
 	}
 
 
@@ -313,9 +348,6 @@
 			this.target = null;
 			this.x;
 			this.y;
-		}
-		factory(type) {
-
 		}
 	}
 	
@@ -369,11 +401,27 @@
 			}
 		}
 		dispatch_event(e) {
-			e.target = this;
 			let ref = this.__listners[e.type];
+			e.target = this;
+			// Coreクラスのイベントをdispatchする
 			if(ref != null){
 				for(let i = 0, len = ref.length; i < len; i += 1){
 					ref[i].listner.call(this, e);
+				}
+			}
+			
+			Gameクラスのイベントをdispatchする
+			let entity = this.game_object ? this.game_object.entity: {}
+			for(let key in entity){
+				for(let i = 0, len = entity[key].length; i < len; i += 1){
+					let ref = entity[key][i].__listners[e.type];
+					// Game.Gameクラスに追加されたinstanceをthisにバインドする
+					let self = e.target = entity[key][i];
+					if(ref != null){
+						for(let k = 0, _len = ref.length; i < _len; i += 1){
+							ref[k].listner.call(self, e);
+						}
+					}
 				}
 			}
 		}
@@ -441,26 +489,27 @@
 				let r = [];
 				this.cache_middle = object;
 				for(let key in object){
-					t[key] = object[key];
-					r.push(t);
+					r.push(key);
 				}
 				return r;
+			}else{
+				return Game.detect_diff(this.cache_middle, object);
 			}
 		}
 		render_middle() {
 			let canvas = this.canvas[1];
 			let ctx = this.context[1];
 			let args = slice.call(arguments, 1);
-			let player = this.game_object.player[0];
-			let merged = Game.merge_instance(player);
-			let diff_key = this.constructor.diff_middle(merged);
-			
+			let data = this.game_object.entity
+			let diff_key = this.constructor.diff_middle(data);
 			let len = diff_key.length;
 			if(len !== 0){
 				for(let i = 0; i < len; i += 1){
-					for(let key in diff_key[i]){
-						if(key === "player"){
-							ctx.drawImage(player.img, 0, 0, 32, 32, player.x, player.y, 32, 32);
+					if(diff_key[i] === "player" && data.player){
+						let p = data.player;
+						for(let j = 0,len = p.length; j < len; j += 1){
+							console.log("move:",p[i]);
+							ctx.drawImage(p[i].img, 0, 0, 32, 32, p[i].x, p[i].y, 32, 32);
 						}
 					}
 				}
@@ -561,7 +610,9 @@
 						if(!this.running) {
 							return;
 						}
+						console.log(e.keyCode);
 						this.dispatch_event(new Game.Event("key_down"));
+						let entity = this.game_object ? this.game_object.entity: {}
 						e.preventDefault();
 						e.stopPropagation();
 					});
@@ -570,7 +621,6 @@
 						if(!this.running){
 							return;
 						}
-
 						this.dispatch_event(new Game.Event("key_up"));
 						e.preventDefault();
 						e.stopPropagation();
@@ -628,6 +678,7 @@
 			if(diff > 60 && now !== 0){
 				this.delayed = diff;
 			}
+
 			this.last = now;
 			this.frame = this.frame + 1;
 			this.main();
@@ -646,6 +697,7 @@
 				this.game_object = obj;
 			}
 		}
+		// TODO: add_gameと同じようにする
 		add_scene(obj){
 			if(Game.is_dict(obj) && obj !== this.scene_object){
 				this.scene_object.push(obj);
@@ -653,51 +705,72 @@
 		}
 		main(time){
 			let e = new Game.Event("enter_frame");
-			let things = this.game_object.things;
-			for(let i = 0, len = things.length; i < len; i += 1){
-				things[i].dispatch_event(e);
-				this.next_middle_frame(things[i]);
+			let entity = this.game_object.entity;
+			for(let key in entity){
+				for(let i = 0, len = entity[key]; i < len; i += 1){
+					console.log("main")
+					entity[key][i].dispatch_event(e);
+					this.next_frame();
+				}
 			}
 			this.animation = request_animation_frame(this.main.bind(this));
 		}
-		next_middle_frame(obj) {
-			// TODO:things一つ前と比較（深く）する
-			// TODO:constructorによって処理を変える
-			if(this.previous !== this.things){
-				this.render_middle.call(obj);
-			}
-			this.previous = this.things;
+		next_frame() {
+			console.log("a");
+			this.render_back.call();
+			this.render_middle.call();
+			this.render_fore.call();
 		}
-		// next_fore_frame(obj){
-		// 	this.render_fore.call(obj);
-		// }
+	}
+
+	Game.Input = class extends Game.EventTarget{
+		constructor(){
+			super();
+			this.input;
+			this._binds = {}
+		}
+		bind(key_c, name) {
+			
+		}
+		unbind(key_c){
+
+		}
 	}
 
 	// 使いまわすシーンを作成(タイトルメニュー、コンテニュー画面?等)
 	Game.Scene = class extends Game.EventTarget{
 		constructor(type, dom){
 			super();
-			this.dom = dom
+			this.entity = dom
 			this.type = type;
 		}
+		// add(dom){
+		// 	//TODO: domかどうか調べる
+		// 	this.entity.push(obj);
+		// }
 	}
 
 	// 現在のゲームが使用するオブジェクトを管理する
 	// 例えばステージ1-2
+	// Game.Entityにしようかな
 	Game.Game = class extends Game.EventTarget{
 		constructor(){
 			super()
 			this.stage;
 			this.level;
-			this.object = [];
-			this.player = [];
+			this.source = [];
+			this.entity = {
+				player: [],
+				enemy: [],
+				item: [],
+			}
 			// this.progress;
 		}
 		// 現在のゲームが管理するものを追加する
-		add(obj) {
+		add_player(obj) {
 			if(Game.is_dict(obj)){
 				if(obj instanceof Game.Player){
-					this.player.push(obj);
+					this.entity.player.push(obj);
 				}
 			}
 		}
@@ -716,7 +789,7 @@
 			let loaded = this.constructor.loaded_progress(wait, imgs_len + xml_len);
 			loaded(cb);
 
-			let assets = this.object
+			let assets = this.source
 			assets.images = {};
 			assets.csves = {};
 			assets.xhr = {};

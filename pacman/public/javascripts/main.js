@@ -50,6 +50,7 @@ import "./game"
 		$.core.store_game_state("title_menu");
 
 		// シーンが変わった時のイベントを追加
+		// TODO: ここの処理もっと改善できる(game.onload)
 		$.core.on("change_scene", function(e){
 			let state = e.target.state;
 			console.log(state);
@@ -59,11 +60,21 @@ import "./game"
 				let f = render_filed($.game, this.w, this.h);
 				$.core.render_back(f.img, f.csv, f.imgpt, f.canvas_pt);
 				
-				let p = render_player($.game);
-				$.game.add(p);
+				$.player = render_player($.game);
+				$.game.add_player($.player);
 				$.core.render_middle();
+				
+				$.player.on("key_down", function () {
+					this.x += 1;
+					this.y += 1;
+				})
+
+				console.log($.player.__listners, $.player.dispatch_event)
+
+				$.core.start();
 			};
 		})
+
 	});
 
 	function load(context){
@@ -74,8 +85,8 @@ import "./game"
 	}
 
 	function render_filed(context, w, h) {
-		let images = context.object.images;
-		let csves = context.object.csves;
+		let images = context.source.images;
+		let csves = context.source.csves;
 		let dungeon_img = images.dungeon;
 		let field_csv = csves.filed;
 		let img_point = Game.create_point(dungeon_img.width, dungeon_img.height, 16, 16);
@@ -91,7 +102,7 @@ import "./game"
 
 	function render_player(context) {
 		let player = new Game.Player(32, 32, "multiple");
-		player.img = context.object.images.player;
+		player.img = context.source.images.player;
 		player.x = 16;
 		player.y = 16;
 		return player
