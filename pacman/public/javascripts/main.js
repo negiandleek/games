@@ -31,7 +31,7 @@ import "./game"
 	$.core.add_game($.game);
 
 	window.addEventListener("DOMContentLoaded",()=>{
-		$.core.setup("touch_move", "touch_end", "key_up");
+		$.core.setup("touch_move", "touch_end");
 		
 		// title menu用のシーンを作成する
 		let title_menu = new Game.Scene("title_menu",create_title_menu());
@@ -53,24 +53,21 @@ import "./game"
 		// TODO: ここの処理もっと改善できる(game.onload)
 		$.core.on("change_scene", function(e){
 			let state = e.target.state;
-			console.log(state);
 			if(state === "loading"){
 				load(this.game_object);
 			}else if(state === "playing"){
-				let f = render_filed($.game, this.w, this.h);
-				$.core.render_back(f.img, f.csv, f.imgpt, f.canvas_pt);
-				
+				$.filed = render_filed($.game, this.w, this.h);
 				$.player = render_player($.game);
-				$.game.add_player($.player);
-				$.core.render_middle();
 				
-				$.player.on("key_down", function () {
-					this.x += 1;
-					this.y += 1;
+				$.game.add_player($.player);
+				$.game.add_filed($.filed);
+
+				$.player.on("enter_frame", function () {
+					console.log($.core.input)
+					// $.player.x += 1;
 				})
 
-				console.log($.player.__listners, $.player.dispatch_event)
-
+				// fpsを開始する
 				$.core.start();
 			};
 		})
@@ -85,19 +82,12 @@ import "./game"
 	}
 
 	function render_filed(context, w, h) {
-		let images = context.source.images;
-		let csves = context.source.csves;
-		let dungeon_img = images.dungeon;
-		let field_csv = csves.filed;
-		let img_point = Game.create_point(dungeon_img.width, dungeon_img.height, 16, 16);
-		let canvas_point = Game.create_point(w, h, 16, 16);
-
-		return {
-			img: dungeon_img, 
-			csv: field_csv, 
-			imgpt: img_point, 
-			canvas_pt: canvas_point
-		};
+		let filed = new Game.Filed();
+		filed.img = context.source.images.dungeon;
+		filed.img_pt = Game.create_point(filed.img.width, filed.img.height, 16, 16);
+		filed.csv = context.source.csves.filed;
+		filed.view_pt = Game.create_point(w, h, 16, 16);
+		return filed;
 	}
 
 	function render_player(context) {

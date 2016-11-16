@@ -50,8 +50,7 @@
 			touch_start: sprt.TOUCH_START,
 			touch_move: sprt.TOUCH_MOVE,
 			touch_end: sprt.TOUCH_END,
-			key_down: "keydown", 
-			key_up: "keyup"
+			key: "keybord"
 		};
 
 		return sprt;
@@ -112,27 +111,6 @@
 
 	Game.is_num = function (obj) {
 		return toString.call(obj) === "[object Number]";
-	}
-
-
-	Game.extend = function(context, obj){
-		let astr = "[object Array]";
-		for(let key in obj){
-			if(obj.hasOwnProperty(key)){
-				if(typeof obj[key] === "object"){
-					let tmp;
-					tmp = toString.call(obj[key] === astr)? []: {};
-					tmp = obj[key];
-					Game.extend(context, tmp);
-				}else{
-					if(!context.hasOwnProperty(key)){
-						throw new Error("ReferenceError: key proparty is not defined)");
-					}
-					context[key] = obj[key];
-				}
-			}
-		}
-		return context;
 	}
 
 	Game.init_assets = function (arr) {
@@ -307,7 +285,7 @@
 		let r = [];
 
 		for(let key in now){
-			if(!this.previous[key]){
+			if(!previous[key]){
 				r.push(key);
 				continue;
 			}else{
@@ -317,13 +295,14 @@
 					r.push(key);
 					continue;
 				}else{
-					let bl = before.length;
-					let al = after.length;
-					for(let i = 0; i < bl; i += 1){
-						let jb = JSON.stringfy(before[i]);
-						let ja = JSON.stringfy(after[i]);
-						if(jb !== ja){
+					let pl = previous[key].length;
+					for(let i = 0; i < pl; i += 1){
+						let jp = JSON.stringify(previous[key][i]);
+						let jn = JSON.stringify(now[key][i]);
+						console.log(jp === jn);
+						if(jp !== jn){
 							r.push(key);
+							console.log(r);
 							break;
 						}
 					}
@@ -337,7 +316,6 @@
 			}
 		}
 
-		console.log(r);
 		return r;
 	}
 
@@ -409,21 +387,6 @@
 					ref[i].listner.call(this, e);
 				}
 			}
-			
-			Gameクラスのイベントをdispatchする
-			let entity = this.game_object ? this.game_object.entity: {}
-			for(let key in entity){
-				for(let i = 0, len = entity[key].length; i < len; i += 1){
-					let ref = entity[key][i].__listners[e.type];
-					// Game.Gameクラスに追加されたinstanceをthisにバインドする
-					let self = e.target = entity[key][i];
-					if(ref != null){
-						for(let k = 0, _len = ref.length; i < _len; i += 1){
-							ref[k].listner.call(self, e);
-						}
-					}
-				}
-			}
 		}
 	}
 
@@ -436,6 +399,7 @@
 			this.context = [];
 			this.root_node;
 			this.cache_middle;
+			this.cache_back;
 		}
 		init(){
 			this.w = w;
@@ -461,26 +425,46 @@
 			this.canvas[len].height = this.h;
 			this.context.push(this.canvas[len].getContext("2d"));
 		}
+		static diff_back(object) {
+			if(!this.cache_back){
+				let t = {};
+				let r = [];
+				this.cache_back = object;
+				for(let key in object){
+					r.push(key);
+				}
+				return r;
+			}else{
+				return Game.detect_diff(this.cache_back, object);
+			}
+		}
 		render_back() {
 			let canvas = this.canvas[0];
 			let ctx = this.context[0];
-			let args = arguments;
+			let gmo = this.game_object
+			// FIX: 差分計算
+			// let diff_key = this.constructor.diff_back(gmo.entity);
+			// let len = diff_key.length;
 			if(this.state === "playing"){
-				let csv = args[1];
-				let img_point = args[2];
-				let canvas_point = args[3];
+				// for(let i = 0; i < len; i += 1){
+				let id = gmo.filed_id;
+				let f =  gmo.entity.filed[id];
+				// if(diff_key[i] === "filed" && f){
 				let index = 0;
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
-				
-				for(let i = 0, len = csv.length; i < len; i += 1){
-					for(let j = 0, _len = csv[i].length; j < _len; j += 1){
-						render(img_point[csv[i][j]], canvas_point[index],16, 16);
+
+				for(let i = 0, len = f.csv.length; i < len; i += 1){
+					for(let j = 0, _len = f.csv[i].length; j < _len; j += 1){
+						render(f.img, f.img_pt[f.csv[i][j]], f.view_pt[index],16, 16);
 						index = index + 1;
 					}
 				}
+				// }
+				// }
 			}
-			function render(img_p, can_p, w, h) {
-				ctx.drawImage(args[0], img_p.x, img_p.y, w, h, can_p.x, can_p.y, w, h);
+
+			function render(img, img_pt, view_pt, w, h) {
+				ctx.drawImage(img, img_pt.x, img_pt.y, w, h, view_pt.x, view_pt.y, w, h);
 			}
 		}
 		static diff_middle(object) {
@@ -497,27 +481,32 @@
 			}
 		}
 		render_middle() {
+			// FIX: 差分計算
 			let canvas = this.canvas[1];
 			let ctx = this.context[1];
-			let args = slice.call(arguments, 1);
-			let data = this.game_object.entity
-			let diff_key = this.constructor.diff_middle(data);
-			let len = diff_key.length;
-			if(len !== 0){
-				for(let i = 0; i < len; i += 1){
-					if(diff_key[i] === "player" && data.player){
-						let p = data.player;
-						for(let j = 0,len = p.length; j < len; j += 1){
-							console.log("move:",p[i]);
-							ctx.drawImage(p[i].img, 0, 0, 32, 32, p[i].x, p[i].y, 32, 32);
-						}
-					}
-				}
+			// let entity = this.game_object.entity
+			let gmo = this.game_object;
+			if(this.state === "playing"){
+				// let diff_key = this.constructor.diff_middle(entity);
+				// let len = diff_key.length;
+				// if(len !== 0){
+				// for(let i = 0; i < len; i += 1){
+				// if(diff_key[i] === "player" && entity.player){
+				let p = gmo.entity.player;
+				let id = gmo.player_id;
+				// for(let j = 0,len = p.length; j < len; j += 1){
+				ctx.clearRect(0, 0, 512, 512);
+				ctx.drawImage(p[id].img, 0, 0, 32, 32, p[id].x, p[id].y, 32, 32);
+				// 			}
+				// 		}
+				// 	}
+				// }
 			}
 		}
 		render_fore () {
 			let canvas = this.canvas[2];
 			let ctx = this.context[2];
+			// FIX:argsをGame.Game.progress_rateで管理する
 			let args = slice.call(arguments, 0);
 			if(this.state === "loading") {
 				let w = 200;
@@ -563,7 +552,7 @@
 			this.state = "init";
 			this.last_touch_target
 			this.running = false;
-
+			this.input;
 			// document.addEventListener(Game.sprt.TOUCH_START, (e) => {
 			// 	this.last_touch_target = e.target;
 			// })
@@ -605,22 +594,22 @@
 						e.preventDefault();
 						e.stopPropagation();
 					});
-				}else if(key === "key_down"){
-					document.addEventListener(events[key], (e) => {
+				}else if(key === "key"){
+					document.addEventListener("keydown", (e) => {
 						if(!this.running) {
 							return;
 						}
-						console.log(e.keyCode);
+						this.input = e.keyCode;
 						this.dispatch_event(new Game.Event("key_down"));
-						let entity = this.game_object ? this.game_object.entity: {}
 						e.preventDefault();
 						e.stopPropagation();
 					});
-				}else if(key === "key_up"){
-					document.addEventListener(events[key], (e) => {
+
+					document.addEventListener("keyup", (e) => {
 						if(!this.running){
 							return;
 						}
+						this.input = null;
 						this.dispatch_event(new Game.Event("key_up"));
 						e.preventDefault();
 						e.stopPropagation();
@@ -707,8 +696,7 @@
 			let e = new Game.Event("enter_frame");
 			let entity = this.game_object.entity;
 			for(let key in entity){
-				for(let i = 0, len = entity[key]; i < len; i += 1){
-					console.log("main")
+				for(let i = 0, len = entity[key].length; i < len; i += 1){
 					entity[key][i].dispatch_event(e);
 					this.next_frame();
 				}
@@ -716,10 +704,9 @@
 			this.animation = request_animation_frame(this.main.bind(this));
 		}
 		next_frame() {
-			console.log("a");
-			this.render_back.call();
-			this.render_middle.call();
-			this.render_fore.call();
+			this.render_back();
+			this.render_middle();
+			this.render_fore();
 		}
 	}
 
@@ -730,7 +717,7 @@
 			this._binds = {}
 		}
 		bind(key_c, name) {
-			
+
 		}
 		unbind(key_c){
 
@@ -752,17 +739,20 @@
 
 	// 現在のゲームが使用するオブジェクトを管理する
 	// 例えばステージ1-2
-	// Game.Entityにしようかな
+	// TODO:preload, load, progress追加する
 	Game.Game = class extends Game.EventTarget{
 		constructor(){
 			super()
-			this.stage;
+			this.filed_id = 0;
+			this.player_id = 0;
+			this.item_id;
 			this.level;
 			this.source = [];
 			this.entity = {
 				player: [],
 				enemy: [],
 				item: [],
+				filed: []
 			}
 			// this.progress;
 		}
@@ -771,6 +761,13 @@
 			if(Game.is_dict(obj)){
 				if(obj instanceof Game.Player){
 					this.entity.player.push(obj);
+				}
+			}
+		}
+		add_filed(obj) {
+			if(Game.is_dict(obj)){
+				if(obj instanceof Game.Filed){
+					this.entity.filed.push(obj);
 				}
 			}
 		}
@@ -854,6 +851,16 @@
 		}
 	}
 
+	Game.Filed = class Filed extends Game.EventTarget{
+		constructor() {
+			super();
+			this.img;
+			this.img_pt;
+			this.csv;
+			this.view_pt;
+		}
+	}
+
 	Game.Player = class Player extends Game.EventTarget{ 
 		constructor(width, height, constant) {
 			super();
@@ -871,11 +878,6 @@
 				this.sprite_type = constant;
 			}else{
 				throw new Error("TypeError: constant is not type");
-			}
-		}
-		set(obj) {
-			if(Game.is_dict(obj)){
-				Game.extend(this, obj);
 			}
 		}
 	}
@@ -897,11 +899,6 @@
 				throw new Error("TypeError: constant is not type");
 			}
 		}
-		set(obj) {
-			if(Game.is_dict(obj)){
-				Game.extend(this, obj);
-			}
-		}
 	}
 
 	Game.Item = class Item extends Game.EventTarget{
@@ -914,11 +911,6 @@
 				this.sprite_type = constant;
 			}else{
 				throw new Error("TypeError: constant is not type");
-			}
-		}
-		set(obj) {
-			if(Game.is_dict(obj)){
-				Game.extend(this, obj);
 			}
 		}
 	}
