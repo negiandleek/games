@@ -138,6 +138,26 @@
 		return collections;
 	};
 
+	Game.extend = function(context, obj){
+		let astr = "[object Array]";
+		for(let key in obj){
+			if(obj.hasOwnProperty(key)){
+				if(typeof obj[key] === "object"){
+					let tmp;
+					tmp = toString.call(obj[key] === astr)? []: {};
+					tmp = obj[key];
+					Game.extend(context, tmp);
+				}else{
+					if(!context.hasOwnProperty(key)){
+						throw new Error("ReferenceError: key proparty is not defined)");
+					}
+					context[key] = obj[key];
+				}
+			}
+		}
+		return context;
+	}
+
 	let store_progress = function (len) {
 		let i = 0;
 
@@ -496,7 +516,7 @@
 				let id = gmo.player_id;
 				// for(let j = 0,len = p.length; j < len; j += 1){
 				ctx.clearRect(0, 0, 512, 512);
-				ctx.drawImage(p[id].img, 0, 0, 32, 32, p[id].x, p[id].y, 32, 32);
+				ctx.drawImage(p[id].img, p[id].sprite_x, p[id].sprite_y, p[id].sprite_w, p[id].sprite_h, p[id].x, p[id].y, 32, 32);
 				// 			}
 				// 		}
 				// 	}
@@ -669,7 +689,6 @@
 			}
 
 			this.last = now;
-			this.frame = this.frame + 1;
 			this.main();
 		}
 		stop() {
@@ -695,6 +714,8 @@
 		main(time){
 			let e = new Game.Event("enter_frame");
 			let entity = this.game_object.entity;
+			this.frame = this.frame + 1;
+			
 			for(let key in entity){
 				for(let i = 0, len = entity[key].length; i < len; i += 1){
 					entity[key][i].dispatch_event(e);
@@ -754,7 +775,8 @@
 				item: [],
 				filed: []
 			}
-			// this.progress;
+			// enemyを管理するオブジェクト
+			this.enemy_manager = new Game.Enemy_Manager();
 		}
 		// 現在のゲームが管理するものを追加する
 		add_player(obj) {
@@ -852,26 +874,54 @@
 	}
 
 	Game.Filed = class Filed extends Game.EventTarget{
-		constructor() {
+		constructor(w, h, sw, sh) {
 			super();
 			this.img;
 			this.img_pt;
 			this.csv;
 			this.view_pt;
+			this.width = w;
+			this.height = h
+			this.sprite_w = sw || 16;
+			this.sprite_h = sh || 16;
+			this.collision;
+		}
+		is_hit(x, y, multi_x, multi_y){
+			let pos_list = [];
+			for(let i = 0; i < multi_y; i += 1){
+				for(let j = 0; j < multi_x; j += 1){
+					let p = {}
+					p.x = (x + (j * this.sprite_w)) / this.sprite_w;
+					p.y = (y + (i * this.sprite_h)) / this.sprite_h;
+					pos_list.push(p);
+				}
+			}
+			for(let i = 0, len = pos_list.length; i < len; i += 1){
+				let p = pos_list[i];
+				// 0以外すべて障害があるとみなす
+				// csvを生成する時に、csv pointをずらしているのを元に戻す
+				if(this.collision[p.y][p.x] + 1){
+					return true;
+				};
+			}
+			return false;
 		}
 	}
 
 	Game.Player = class Player extends Game.EventTarget{ 
-		constructor(width, height, constant) {
+		constructor(w, h, constant) {
 			super();
 			// スプライトを変更する時などに用いる
 			this.change = false;
 			this.img;
 			this.life;
-			this.speed;
-			this.size;
-			this.x;
-			this.y;
+			this.x = 16;
+			this.y = 16;
+			// TODO:タイルのほうがわかりやすい
+			this.sprite_w = w || 16;
+			this.sprite_h = h || 16;
+			this.sprite_x = 0;
+			this.sprite_y = 0;
 			if(constant == null || constant == "single"){
 				this.sprite_type = "single";
 			}else if(constant === "multiple"){
@@ -880,24 +930,95 @@
 				throw new Error("TypeError: constant is not type");
 			}
 		}
+		move_by(x, y) {
+			this.x = this.x + x;
+			this.y = this.y + y
+		}
+		// なくても問題ない
+		generate_view_pt(_direction){
+			// {up: [{x: 16, y: 32},{x: 32, y: 48}],{down: }
+			let view_pt = {
+				up: [],
+				right: [],
+				down: [],
+				left: []
+			};
+
+			let x = this.sprite_w;
+			let y = this.sprite_h;
+
+			let direction = _direction || ["down", "left", "right", "up"];
+
+			if(Game.is_array(direction)){
+				for(let i = 0, len = direction.length; i < len; i += 1){
+					if(view_pt[direction[i]] == null){
+						throw new Error("TypeError: arguments is not type")
+					}
+					for(let j = 0, max_x = this.img.width / x; j < max_x; j += 1){
+						let position = {};
+						position.y = i * y;
+						position.x = j * x;
+						view_pt[direction[i]][j] = position;
+					}
+				}
+
+				return view_pt;
+			}
+		}
 	}
 
-	Game.Enemy = class Enemy extends Game.EventTarget{
-		constructor(width, height, constant) {
+	let instance_enemy_type = null;
+	Game.Enemy_Type = class EnemyType extends Game.EventTarget{
+		constructor(){
 			super();
-			this.img;
-			this.life;
-			this.speed;
-			this.size;
-			this.x;
-			this.y;
-			if(constant == null || constant == "single"){
-				this.sprite_type = "single";
-			}else if(constant === "multiple"){
-				this.sprite_type = constant;
-			}else{
-				throw new Error("TypeError: constant is not type");
+			this.enemy_type = {};
+			if(!instance_enemy_type){
+				instance_enemy_type = this;
 			}
+			return instance_enemy_type;
+		}
+		add_enemy_type(obj) {
+			if(Game.is_dict(obj)){
+				this.enemy_type[obj.name] = obj;
+			}else if(Game.is_array(obj)){
+
+			}
+		}
+		remove_enemy_type(name) {
+			if(Game.is_str(name)){
+				delete this.enemy_type[name]
+			}
+		}
+	}
+
+	Game.Enemy_Manager = class MangeEnemy extends Game.Enemy_Type{
+		constructor() {
+			super();
+			this.max_num = 0;
+			this.num = 0;
+			this.enemys = [];
+		}
+		add_enemy() {
+			let num = this.max_num - this.num;
+			for(let i = 0; i < num; i += 1){
+				if(!this.enemys[i]){
+					this.enemys[i] = new Game.Enemy("zombie1");
+				}
+			}
+		}
+		remove_enemy() {
+
+		}
+	}
+
+	Game.Enemy = class Enemy extends Game.Enemy_Type{
+		constructor(type) {
+			super();
+			console.log(this.enemy_type);
+			// Game.extend(this.enemy_type.type)
+		}
+		move() {
+
 		}
 	}
 
