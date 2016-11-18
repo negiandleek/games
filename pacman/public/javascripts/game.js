@@ -138,25 +138,51 @@
 		return collections;
 	};
 
-	Game.extend = function(context, obj){
+	Game.extend = function(context, obj, instead){
 		let astr = "[object Array]";
-		for(let key in obj){
+		let key;
+		for(key in obj){
 			if(obj.hasOwnProperty(key)){
-				if(typeof obj[key] === "object"){
-					let tmp;
+				if(obj[key] instanceof HTMLImageElement){
+
+					context[key] = obj[key];
+				}else if(typeof obj[key] === "object"){
 					tmp = toString.call(obj[key] === astr)? []: {};
 					tmp = obj[key];
-					Game.extend(context, tmp);
+					Game.extend(context[key], tmp[key], instead);
 				}else{
-					if(!context.hasOwnProperty(key)){
-						throw new Error("ReferenceError: key proparty is not defined)");
+					if(!context.hasOwnProperty(key) && !instead){
+						throw new Error("ReferenceError: key proparty is not defined, Game.js");
 					}
 					context[key] = obj[key];
 				}
 			}
 		}
-		return context;
-	}
+			return context;
+		}
+		Game.extend = function(destination, source, instead){
+			let astr = "[object Array]";
+			let toStr = Object.prototype.toString;
+			for(let i in source){
+				if(source.hasOwnProperty(i)){
+					if(source[i] instanceof HTMLImageElement){
+						if(!destination.hasOwnProperty(i) && !instead){
+							throw new Error("ReferenceError: proparty is not defined, Game.js");
+						}
+						destination[i] = source[i];
+					}else if(typeof source[i] === "object"){
+			 	 		destination[i] = (toStr.call(source[i])) == astr ? []: {}
+			  			Game.extend(destination[i], source[i], instead)
+					}else{
+						if(!destination.hasOwnProperty(i) && !instead){
+							throw new Error("ReferenceError: proparty is not defined, Game.js");
+						}
+			  			destination[i] = source[i]
+					}
+				}
+			}
+			return destination;
+		}
 
 	let store_progress = function (len) {
 		let i = 0;
@@ -358,9 +384,8 @@
 	Game.Event.KEY_DOWN = "key_down";
 	Game.Event.KEY_UP = "key_up";
 
-	Game.EventTarget = class extends Game.Event{
+	Game.EventTarget = class {
 		constructor () {
-			super();
 			this.__listners = {};
 		}
 		on(){
@@ -745,8 +770,24 @@
 		}
 	}
 
-	// 使いまわすシーンを作成(タイトルメニュー、コンテニュー画面?等)
-	Game.Scene = class extends Game.EventTarget{
+	// 使いまわすゲーム外のシーンを作成(タイトルメニュー、コンテニュー画面?等)
+	Game.OutScene = class extends Game.EventTarget{
+		constructor(type, dom){
+			super();
+			this.entity = dom
+			this.type = type;
+		}
+	}
+	// ゲーム内のシーンを作成（ステータス、イベントリ）
+	Game.Block = class extends Game.EventTarget{
+		constructor(type, dom){
+			super();
+			this.entity = dom
+			this.type = type;
+		}
+	}
+	// Game.Blockを一つにまとめて管理するクラス
+	Game.InScene = class extends Game.Block{
 		constructor(type, dom){
 			super();
 			this.entity = dom
@@ -762,8 +803,12 @@
 	// 例えばステージ1-2
 	// TODO:preload, load, progress追加する
 	Game.Game = class extends Game.EventTarget{
-		constructor(){
+		constructor(x, y){
 			super()
+			this.view_pt = {
+				x: x || 0,
+				y: y || 0
+			};
 			this.filed_id = 0;
 			this.player_id = 0;
 			this.item_id;
@@ -776,7 +821,8 @@
 				filed: []
 			}
 			// enemyを管理するオブジェクト
-			this.enemy_manager = new Game.Enemy_Manager();
+			this.enemy_manager = new Game.EnemyManager();
+			this.entity.enemy = this.enemy_manager.enemys;
 		}
 		// 現在のゲームが管理するものを追加する
 		add_player(obj) {
@@ -873,6 +919,111 @@
 		}
 	}
 
+	Game.EnemyManager = class MangeEnemy extends Game.EventTarget{
+		constructor() {
+			super();
+			this.max_num = 0;
+			this.num = 0;
+			this.enemys = [];
+		}
+		add_type(obj) {
+			Game.EnemyType.add_enemy_type(obj);
+			Game.EnemyType.get_enemy_type("zombie1");
+		}
+		remove_type(name) {
+
+		}
+		// generate_position(range_x, range_y, name, field_tile_x, field_tile_y) {
+		// 	let x = Math.floor(Math.random() * range_x);
+		// 	let y = Math.floor(Math.random() * range_y);
+		// 	let type = Game.EnemyType.get_enemy_type(name)
+		// 	let len = this.enemys.length;
+		// 	let multi_x = type.tile_w / field_tile_x;
+		// 	let multi_y = type.tile_y / field_tile_y;
+
+		// 	if(len){
+		// 		for(let i = 0; i < len; i+=1){
+		// 			if(this.enemys[i].x === x && this.enemys[i].y === y){
+		// 				this.constructor.generate(range_x, range_y);
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+
+		// 	return {x,y}
+		// }
+		// appear_enemy(range_x, range_y, tile_x, tile_x) {
+		// 	let field_tile_x = tile_x || 16;
+		// 	let field_tile_y = tile_x || 16;
+		// 	let num = this.max_num - this.num;
+		// 	for(let i = 0; i < num; i += 1){
+		// 		if(!this.enemys[i]){
+		// 			this.enemys[i] = new Game.Enemy("zombie1");
+		// 		}
+		// 	}
+		// }
+		disappear_enemy() {
+
+		}
+		move() {
+
+		}
+	}
+
+	Game.Enemy = class Enemy extends Game.EnemyManager{
+		constructor(type, x, y) {
+			super();
+			this.type = {};
+			Game.extend(this.type, Game.EnemyType.get_enemy_type(type), true)
+			this.x = x;
+			this.y = y;
+		}
+	}
+
+	Game.EnemyTypeManage = class EnemyTypeManage extends Game.EventTarget{
+		constructor(){
+			super();
+		}
+		notify_appear_enemy() {
+
+		}
+		notify_appear_enemy() {
+
+		}
+	} 
+
+	Game.EnemyType = class EnemyType extends Game.EnemyTypeManage{
+		constructor(obj){
+			super();
+			delete obj.name;
+			this.type = obj;
+		}
+		static add_enemy_type(obj) {
+			if(Game.is_dict(obj)){
+				if(!Game.EnemyType.instance[obj.name]){
+					Game.EnemyType.instance[obj.name] = new Game.EnemyType(obj);
+				}
+			}else if(Game.is_array(obj)){
+				for(let i = 0, len = obj.length; i < len; i += 1){
+					if(!Game.EnemyType.instance[obj[i][name]]){
+						Game.EnemyType.instance[obj[i][name]] = new Game.EnemyType(obj);
+					}
+				}
+			}
+		}
+		static remove_enemy_type(name) {
+			if(Game.is_str(name)){
+				delete Game.EnemyType.instance[name]
+			}
+		}
+		static get_enemy_type(name){
+			if(Game.is_str(name)){
+				return Game.EnemyType.instance[name];
+			}
+		}
+	}
+	Game.EnemyType.instance = {};
+
 	Game.Filed = class Filed extends Game.EventTarget{
 		constructor(w, h, sw, sh) {
 			super();
@@ -886,11 +1037,13 @@
 			this.sprite_h = sh || 16;
 			this.collision;
 		}
+		// 対象の[x,y]とfiledを元に対象の大きさ[multi_x, multi_y]
 		is_hit(x, y, multi_x, multi_y){
 			let pos_list = [];
 			for(let i = 0; i < multi_y; i += 1){
 				for(let j = 0; j < multi_x; j += 1){
 					let p = {}
+					// field csv の2次元配列のインデックスを計算
 					p.x = (x + (j * this.sprite_w)) / this.sprite_w;
 					p.y = (y + (i * this.sprite_h)) / this.sprite_h;
 					pos_list.push(p);
@@ -967,60 +1120,6 @@
 		}
 	}
 
-	let instance_enemy_type = null;
-	Game.Enemy_Type = class EnemyType extends Game.EventTarget{
-		constructor(){
-			super();
-			this.enemy_type = {};
-			if(!instance_enemy_type){
-				instance_enemy_type = this;
-			}
-			return instance_enemy_type;
-		}
-		add_enemy_type(obj) {
-			if(Game.is_dict(obj)){
-				this.enemy_type[obj.name] = obj;
-			}else if(Game.is_array(obj)){
-
-			}
-		}
-		remove_enemy_type(name) {
-			if(Game.is_str(name)){
-				delete this.enemy_type[name]
-			}
-		}
-	}
-
-	Game.Enemy_Manager = class MangeEnemy extends Game.Enemy_Type{
-		constructor() {
-			super();
-			this.max_num = 0;
-			this.num = 0;
-			this.enemys = [];
-		}
-		add_enemy() {
-			let num = this.max_num - this.num;
-			for(let i = 0; i < num; i += 1){
-				if(!this.enemys[i]){
-					this.enemys[i] = new Game.Enemy("zombie1");
-				}
-			}
-		}
-		remove_enemy() {
-
-		}
-	}
-
-	Game.Enemy = class Enemy extends Game.Enemy_Type{
-		constructor(type) {
-			super();
-			console.log(this.enemy_type);
-			// Game.extend(this.enemy_type.type)
-		}
-		move() {
-
-		}
-	}
 
 	Game.Item = class Item extends Game.EventTarget{
 		constructor(width, height) {

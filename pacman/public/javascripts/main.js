@@ -42,7 +42,7 @@ import "./game"
 		$.core.setup("touch_move", "touch_end");
 		
 		// title menu用のシーンを作成する
-		let title_menu = new Game.Scene("title_menu",create_title_menu());
+		let title_menu = new Game.OutScene("title_menu",create_title_menu());
 		title_menu.on("change_scene", function (e) {
 			if($.core.state === "title_menu"){
 				$.core.root_node.style.display = "block";
@@ -144,20 +144,22 @@ import "./game"
 					}
 				}
 				// enemy
-				$.game.enemy_manager.add_enemy_type({
-					name: "zombie1",
-					img: $.game.source.images.zombie1,
-					tile_w: 32,
-					tile_h: 32,
-					frame: [{
-						up: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
-						left: [{x: 0,y: 88},{x: 32,y: 88},{x: 62,y: 88}],
-						right: [{x: 0,y: 152},{x: 32,y: 152},{x: 62,y: 152}],
-						down: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
-					}],
-				})
-				$.game.enemy_manager.max_num = 3;
-				$.game.enemy_manager.add_enemy();
+				// let id = 
+				// $.game.enemy_manager.add_type({
+				// 	name: "zombie1",
+				// 	img: $.game.source.images.zombie1,
+				// 	tile_w: 32,
+				// 	tile_h: 32,
+				// 	frame: {
+				// 		up: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
+				// 		left: [{x: 0,y: 88},{x: 32,y: 88},{x: 62,y: 88}],
+				// 		right: [{x: 0,y: 152},{x: 32,y: 152},{x: 62,y: 152}],
+				// 		down: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
+				// 	}
+				// })
+				// $.game.enemy_manager.max_num = 3;
+
+				// $.game.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h);
 
 				// fpsを開始する
 				$.core.start();
