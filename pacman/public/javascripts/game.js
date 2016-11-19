@@ -799,9 +799,10 @@
 		// }
 	}
 
-	// 現在のゲームが使用するオブジェクトを管理する
-	// 例えばステージ1-2
+	// ゲームが使用する全体のオブジェクトを管理する
+	// 例えばセーブデータ1
 	// TODO:preload, load, progress追加する
+	// TODO: Game.Game -> Game.Manager
 	Game.Game = class extends Game.EventTarget{
 		constructor(x, y){
 			super()
@@ -816,13 +817,13 @@
 			this.source = [];
 			this.entity = {
 				player: [],
-				enemy: [],
-				item: [],
+				// fieldオブジェクト一つで現在のゲームのオブジェクトを管理する
+				// stage:1-2, dungeon:目覚めの森
+				// square_idでフィールドと結びつけた(rpgにおける敵、ツボのなかのアイテムなどの)オブジェクトは画面上から隠す
+				// もしくは(npc, enemyなどの)idを持っているオブジェクトは画面上に表示する
 				filed: []
 			}
-			// enemyを管理するオブジェクト
-			this.enemy_manager = new Game.EnemyManager();
-			this.entity.enemy = this.enemy_manager.enemys;
+			this.enemy_type = Game.EnemyTypeManage;
 		}
 		// 現在のゲームが管理するものを追加する
 		add_player(obj) {
@@ -926,13 +927,6 @@
 			this.num = 0;
 			this.enemys = [];
 		}
-		add_type(obj) {
-			Game.EnemyType.add_enemy_type(obj);
-			Game.EnemyType.get_enemy_type("zombie1");
-		}
-		remove_type(name) {
-
-		}
 		// generate_position(range_x, range_y, name, field_tile_x, field_tile_y) {
 		// 	let x = Math.floor(Math.random() * range_x);
 		// 	let y = Math.floor(Math.random() * range_y);
@@ -974,13 +968,13 @@
 		constructor(type, x, y) {
 			super();
 			this.type = {};
-			Game.extend(this.type, Game.EnemyType.get_enemy_type(type), true)
+			Game.extend(this.type, Game.EnemyType.get_type(type), true)
 			this.x = x;
 			this.y = y;
 		}
 	}
 
-	Game.EnemyTypeManage = class EnemyTypeManage extends Game.EventTarget{
+	Game.InputEnemyType = class EnemyTypeManage extends Game.EventTarget{
 		constructor(){
 			super();
 		}
@@ -992,37 +986,37 @@
 		}
 	} 
 
-	Game.EnemyType = class EnemyType extends Game.EnemyTypeManage{
+	Game.EnemyTypeManage = class EnemyTypeManage extends Game.InputEnemyType{
 		constructor(obj){
 			super();
 			delete obj.name;
 			this.type = obj;
 		}
-		static add_enemy_type(obj) {
+		static add_type(obj) {
 			if(Game.is_dict(obj)){
-				if(!Game.EnemyType.instance[obj.name]){
-					Game.EnemyType.instance[obj.name] = new Game.EnemyType(obj);
+				if(!Game.EnemyTypeManage.instance[obj.name]){
+					Game.EnemyTypeManage.instance[obj.name] = new Game.EnemyTypeManage(obj);
 				}
 			}else if(Game.is_array(obj)){
 				for(let i = 0, len = obj.length; i < len; i += 1){
-					if(!Game.EnemyType.instance[obj[i][name]]){
-						Game.EnemyType.instance[obj[i][name]] = new Game.EnemyType(obj);
+					if(!Game.EnemyTypeManage.instance[obj[i][name]]){
+						Game.EnemyTypeManage.instance[obj[i][name]] = new Game.EnemyTypeManage(obj);
 					}
 				}
 			}
 		}
-		static remove_enemy_type(name) {
+		static remove_type(name) {
 			if(Game.is_str(name)){
-				delete Game.EnemyType.instance[name]
+				delete Game.EnemyTypeManage.instance[name]
 			}
 		}
-		static get_enemy_type(name){
+		static get_type(name){
 			if(Game.is_str(name)){
-				return Game.EnemyType.instance[name];
+				return Game.EnemyTypeManage.instance[name];
 			}
 		}
 	}
-	Game.EnemyType.instance = {};
+	Game.EnemyTypeManage.instance = {};
 
 	Game.Filed = class Filed extends Game.EventTarget{
 		constructor(w, h, sw, sh) {

@@ -144,21 +144,18 @@ import "./game"
 					}
 				}
 				// enemy
-				// let id = 
-				// $.game.enemy_manager.add_type({
-				// 	name: "zombie1",
-				// 	img: $.game.source.images.zombie1,
-				// 	tile_w: 32,
-				// 	tile_h: 32,
-				// 	frame: {
-				// 		up: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
-				// 		left: [{x: 0,y: 88},{x: 32,y: 88},{x: 62,y: 88}],
-				// 		right: [{x: 0,y: 152},{x: 32,y: 152},{x: 62,y: 152}],
-				// 		down: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
-				// 	}
-				// })
-				// $.game.enemy_manager.max_num = 3;
-
+				$.game.enemy_type.add_type({
+					name: "zombie1",
+					img: $.game.source.images.zombie1,
+					tile_w: 32,
+					tile_h: 32,
+					frame: {
+						up: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
+						left: [{x: 0,y: 88},{x: 32,y: 88},{x: 62,y: 88}],
+						right: [{x: 0,y: 152},{x: 32,y: 152},{x: 62,y: 152}],
+						down: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
+					}
+				})
 				// $.game.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h);
 
 				// fpsを開始する
