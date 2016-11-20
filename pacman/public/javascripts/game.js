@@ -542,6 +542,15 @@
 				// for(let j = 0,len = p.length; j < len; j += 1){
 				ctx.clearRect(0, 0, 512, 512);
 				ctx.drawImage(p[id].img, p[id].sprite_x, p[id].sprite_y, p[id].sprite_w, p[id].sprite_h, p[id].x, p[id].y, 32, 32);
+
+				let f = gmo.entity.filed;
+				let fid = gmo.filed_id;
+				let entitys = f[fid].enemys;
+				for(let i = 0, len = entitys.length; i < len; i += 1){
+					ctx.drawImage(entitys[i].type.img, 
+						entitys[i].tile_x, entitys[i].tile_y, entitys[i].tile_w, entitys[i].tile_h,
+						entitys[i].x, entitys[i].y, entitys[i].width, entitys[i].height);
+				}
 				// 			}
 				// 		}
 				// 	}
@@ -821,7 +830,8 @@
 				// stage:1-2, dungeon:目覚めの森
 				// square_idでフィールドと結びつけた(rpgにおける敵、ツボのなかのアイテムなどの)オブジェクトは画面上から隠す
 				// もしくは(npc, enemyなどの)idを持っているオブジェクトは画面上に表示する
-				filed: []
+				filed: [],
+				enemy: []
 			}
 			this.enemy_type = Game.EnemyTypeManage;
 		}
@@ -837,6 +847,13 @@
 			if(Game.is_dict(obj)){
 				if(obj instanceof Game.Filed){
 					this.entity.filed.push(obj);
+				}
+			}
+		}
+		add_enemy(obj){
+			if(Game.is_dict(obj)){
+				if(obj instanceof Game.Enemy){
+					this.entity.enemy.push(obj);
 				}
 			}
 		}
@@ -921,46 +938,48 @@
 	}
 
 	Game.EnemyManager = class MangeEnemy extends Game.EventTarget{
-		constructor() {
+		constructor(field) {
 			super();
 			this.max_num = 0;
 			this.num = 0;
 			this.enemys = [];
+			this.field = field;
 		}
-		// generate_position(range_x, range_y, name, field_tile_x, field_tile_y) {
-		// 	let x = Math.floor(Math.random() * range_x);
-		// 	let y = Math.floor(Math.random() * range_y);
-		// 	let type = Game.EnemyType.get_enemy_type(name)
-		// 	let len = this.enemys.length;
-		// 	let multi_x = type.tile_w / field_tile_x;
-		// 	let multi_y = type.tile_y / field_tile_y;
-
-		// 	if(len){
-		// 		for(let i = 0; i < len; i+=1){
-		// 			if(this.enemys[i].x === x && this.enemys[i].y === y){
-		// 				this.constructor.generate(range_x, range_y);
-		// 				break;
-		// 			}
-		// 		}
-		// 	}
-
-		// 	return {x,y}
-		// }
-		// appear_enemy(range_x, range_y, tile_x, tile_x) {
-		// 	let field_tile_x = tile_x || 16;
-		// 	let field_tile_y = tile_x || 16;
-		// 	let num = this.max_num - this.num;
-		// 	for(let i = 0; i < num; i += 1){
-		// 		if(!this.enemys[i]){
-		// 			this.enemys[i] = new Game.Enemy("zombie1");
-		// 		}
-		// 	}
-		// }
+		generate_position(range_x, range_y, name, _x, _y) {
+			let x = _x || Math.floor(Math.random() * range_x);
+			let y = _y || Math.floor(Math.random() * range_y);
+			let type = Game.EnemyTypeManage.get_type(name).type
+			let len = this.enemys.length;
+			let multi_x = type.tile_w / this.field.sprite_w;
+			let multi_y = type.tile_h / this.field.sprite_h;
+			// TODO:playerとの衝突による生成やり直し
+			if(len){
+				for(let i = 0; i < len; i+=1){
+					if(this.enemys[i].x === x && this.enemys[i].y === y){
+						return this.generate_position(range_x, range_y, name);
+					}
+				}
+			}
+			if(this.field.is_hit(x, y, multi_x, multi_y)){
+				return this.generate_position(range_x, range_y, name);
+			}
+			return {x,y}
+		}
+		appear_enemy(range_x, range_y, _type) {
+			let type = _type || "zombie1";
+			let num = this.max_num - this.num;
+			for(let i = 0; i < num; i += 1){
+				if(!this.enemys[i]){
+					let {x,y} = this.generate_position(range_x, range_y, type);
+					this.enemys[i] = new Game.Enemy(type, x, y);
+				}
+			}
+		}
 		disappear_enemy() {
 
 		}
 		move() {
-
+			
 		}
 	}
 
@@ -968,9 +987,15 @@
 		constructor(type, x, y) {
 			super();
 			this.type = {};
-			Game.extend(this.type, Game.EnemyType.get_type(type), true)
+			Game.extend(this, Game.EnemyTypeManage.get_type(type), true)
 			this.x = x;
 			this.y = y;
+			this.width = 32;
+			this.height = 48;
+			this.tile_x = this.type.frame.down[0].x;
+			this.tile_y = this.type.frame.down[0].y;
+			this.tile_w = this.type.tile_w;
+			this.tile_h = this.type.tile_h;
 		}
 	}
 
@@ -1030,19 +1055,28 @@
 			this.sprite_w = sw || 16;
 			this.sprite_h = sh || 16;
 			this.collision;
+			// enemyのクラスを管理
+			this.enemy_manager = new Game.EnemyManager(this);
+			this.enemys = this.enemy_manager.enemys;
+			
+			this.items = [];
 		}
 		// 対象の[x,y]とfiledを元に対象の大きさ[multi_x, multi_y]
 		is_hit(x, y, multi_x, multi_y){
 			let pos_list = [];
+			// マス目左上(m * tile_w,  n* tile_h)に合わせる
+			let position_x = Math.floor(x / this.sprite_w) * this.sprite_w;
+			let position_y = Math.floor(y / this.sprite_h) * this.sprite_h;
+			// field csv の2次元配列のインデックスを計算
 			for(let i = 0; i < multi_y; i += 1){
 				for(let j = 0; j < multi_x; j += 1){
 					let p = {}
-					// field csv の2次元配列のインデックスを計算
-					p.x = (x + (j * this.sprite_w)) / this.sprite_w;
-					p.y = (y + (i * this.sprite_h)) / this.sprite_h;
+					p.x = (position_x + (j * this.sprite_w)) / this.sprite_w;
+					p.y = (position_y + (i * this.sprite_h)) / this.sprite_h;
 					pos_list.push(p);
 				}
 			}
+
 			for(let i = 0, len = pos_list.length; i < len; i += 1){
 				let p = pos_list[i];
 				// 0以外すべて障害があるとみなす
@@ -1069,13 +1103,13 @@
 			this.sprite_h = h || 16;
 			this.sprite_x = 0;
 			this.sprite_y = 0;
-			if(constant == null || constant == "single"){
-				this.sprite_type = "single";
-			}else if(constant === "multiple"){
-				this.sprite_type = constant;
-			}else{
-				throw new Error("TypeError: constant is not type");
-			}
+			// if(constant == null || constant == "single"){
+			// 	this.sprite_type = "single";
+			// }else if(constant === "multiple"){
+			// 	this.sprite_type = constant;
+			// }else{
+			// 	throw new Error("TypeError: constant is not type");
+			// }
 		}
 		move_by(x, y) {
 			this.x = this.x + x;

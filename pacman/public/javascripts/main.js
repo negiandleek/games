@@ -148,15 +148,26 @@ import "./game"
 					name: "zombie1",
 					img: $.game.source.images.zombie1,
 					tile_w: 32,
-					tile_h: 32,
+					tile_h: 48,
 					frame: {
-						up: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
+						down: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
 						left: [{x: 0,y: 88},{x: 32,y: 88},{x: 62,y: 88}],
 						right: [{x: 0,y: 152},{x: 32,y: 152},{x: 62,y: 152}],
-						down: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
+						up: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
 					}
 				})
-				// $.game.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h);
+
+				$.filed.enemy_manager.max_num = 3;
+				$.filed.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
+				$.filed.enemys.map(function (enemy) {
+					$.game.add_enemy(enemy);
+					enemy.on("enter_frame", function () {
+						let player_pos_x = Math.floor($.player.x / $.filed.sprite_w) * $.filed.sprite_w;
+						let player_pos_y = Math.floor($.player.y / $.filed.sprite_h) * $.filed.sprite_h;
+						console.log(player_pos_x);
+						this.move();
+					})
+				})
 
 				// fpsを開始する
 				$.core.start();
