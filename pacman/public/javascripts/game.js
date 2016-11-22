@@ -821,8 +821,8 @@
 			};
 			this.filed_id = 0;
 			this.player_id = 0;
-			this.item_id;
-			this.level;
+			// this.item_id;
+			// this.level;
 			this.source = [];
 			this.entity = {
 				player: [],
@@ -945,9 +945,9 @@
 			this.enemys = [];
 			this.field = field;
 		}
-		generate_position(range_x, range_y, name, _x, _y) {
-			let x = _x || Math.floor(Math.random() * range_x);
-			let y = _y || Math.floor(Math.random() * range_y);
+		generate_position(range_x, range_y, name) {
+			let y = Math.floor(Math.random() * range_x / this.field.sprite_w) * this.field.sprite_w;
+			let x = Math.floor(Math.random() * range_y / this.field.sprite_h) * this.field.sprite_h;
 			let type = Game.EnemyTypeManage.get_type(name).type
 			let len = this.enemys.length;
 			let multi_x = type.tile_w / this.field.sprite_w;
@@ -978,8 +978,44 @@
 		disappear_enemy() {
 
 		}
-		move() {
-			
+		move(arr) {
+			if(Game.is_array(arr)){
+
+			}
+		}
+		generate_effect_map(map_w, map_h, target_x, target_y) {
+			let column = map_h / 16;
+			let row = map_w / 16;
+			let map = []
+			for(let i = 0; i < column; i += 1){
+				for(let j = 0; j < row; j += 1){
+					map.push(new Game.EffectMap());
+				}
+			}
+			let subject_index = this.detect_position(this.x, this.y);
+			let target_index = this.detect_position(target_x, target_y);
+			map[target_index].target = true;
+
+			function search(index){
+				let node = map[index];
+				
+				
+			}
+			search(subject_index)
+		}
+		detect_position(x, y) {
+			let index_x = x / 16;
+			let index_y = y / 16;
+			return index_x * index_y;
+		}
+	}
+
+	Game.EffectMap = class EffectMap {
+		constructor(){
+			this.cost = -1;
+			this.previous_node;
+			this.done = false;
+			this.target = false;
 		}
 	}
 
@@ -1076,7 +1112,6 @@
 					pos_list.push(p);
 				}
 			}
-
 			for(let i = 0, len = pos_list.length; i < len; i += 1){
 				let p = pos_list[i];
 				// 0以外すべて障害があるとみなす

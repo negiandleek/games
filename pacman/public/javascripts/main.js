@@ -157,15 +157,17 @@ import "./game"
 					}
 				})
 
-				$.filed.enemy_manager.max_num = 3;
+				$.filed.enemy_manager.max_num = 1;
 				$.filed.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
 				$.filed.enemys.map(function (enemy) {
 					$.game.add_enemy(enemy);
 					enemy.on("enter_frame", function () {
-						let player_pos_x = Math.floor($.player.x / $.filed.sprite_w) * $.filed.sprite_w;
-						let player_pos_y = Math.floor($.player.y / $.filed.sprite_h) * $.filed.sprite_h;
-						console.log(player_pos_x);
-						this.move();
+						let player_x = Math.floor($.player.x / $.filed.sprite_w) * $.filed.sprite_w;
+						let player_y = Math.floor($.player.y / $.filed.sprite_h) * $.filed.sprite_h;
+						if($.core.frame === 1){
+							enemy.generate_effect_map($.core.w, $.core.h, player_x, player_y)
+							// this.move(command);
+						}
 					})
 				})
 
