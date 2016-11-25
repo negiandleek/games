@@ -988,33 +988,54 @@
 			let row = map_w / 16;
 			let map = []
 			for(let i = 0; i < column; i += 1){
+				map[i] = [];
 				for(let j = 0; j < row; j += 1){
-					map.push(new Game.EffectMap());
+					map[i].push(new Game.EffectMap());
 				}
 			}
-			let subject_index = this.detect_position(this.x, this.y);
-			let target_index = this.detect_position(target_x, target_y);
-			map[target_index].target = true;
+			let subject = this.detect_position(this.x, this.y);
+			let target = this.detect_position(target_x, target_y);
+			map[target.v][target.h].target = true;
 
-			function search(index){
-				let node = map[index];
-				
-				
+			function dijkstra(v, h, previous_v, previous_h) {
+			    let flag = true;
+			    if(previous_v == null && previous_h == null){
+			    	map[v][h].cost = 0;
+			    }else if(map[v][h].cost < 0){
+			       map[v][h].cost += 1;
+			       map[v][h].previous = {v: v, h: h}
+			    }else{
+			        let _cost = map[previous_h][previous_v] + 1;
+			        if(map[v][h].cost > _cost){
+			            map[v][h].cost = _cost;
+			            map[v][h].previous = {v: v, h: h}
+			        }else{
+			            flag = false;
+			        }
+			    }
+			    for(let i = 1; i<= 2; i += 1){
+			        for(let j = 1; j <= 2; j += 1){
+			            let _v = 1 - (1 % 2) * 2;
+			            let _h = 1 - (1 % 2) * 2;
+			            if(0 <= _v && _v < row && 0 <= _h && _h <= column && flag){
+			                dijkstra(_v,_h, v, h);
+			            }
+			        }
+			    }
 			}
-			search(subject_index)
+			dijkstra(subject.v, subject.h);
 		}
 		detect_position(x, y) {
-			let index_x = x / 16;
-			let index_y = y / 16;
-			return index_x * index_y;
+			let vertical = y / 16;
+			let horizontal = x / 16;
+			return {v: vertical, h: horizontal};
 		}
 	}
 
 	Game.EffectMap = class EffectMap {
 		constructor(){
 			this.cost = -1;
-			this.previous_node;
-			this.done = false;
+			this.previous;
 			this.target = false;
 		}
 	}
