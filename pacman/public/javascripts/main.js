@@ -81,7 +81,6 @@ import "./game"
 					//TODO: 0 1 0 2
 					this.sprite_x = this.sprite_pos[input][1].x;
 					this.sprite_y = this.sprite_pos[input][1].y;
-
 					if(this.is_moveing){
 						switch($.core.frame % 6){
 							case 2:
@@ -133,7 +132,6 @@ import "./game"
 							let multi_y = $.player.sprite_h / filed.sprite_h;
 							let diff_x = multi_x * filed.sprite_w;
 							let diff_y = multi_y * filed.sprite_h;
-
 							if(0 <= x && x < filed.width - diff_x && 
 								0 <= y && y < filed.height - diff_y &&
 								!filed.is_hit(x, y, multi_x, multi_y)){
@@ -151,23 +149,96 @@ import "./game"
 					tile_h: 48,
 					frame: {
 						down: [{x: 0,	y: 24},{x: 32, y: 24},{x: 64, y: 24}],
-						left: [{x: 0,y: 88},{x: 32,y: 88},{x: 62,y: 88}],
-						right: [{x: 0,y: 152},{x: 32,y: 152},{x: 62,y: 152}],
-						up: [{x: 0,y: 192},{x: 32,y: 192},{x: 62,y: 192}],
+						left: [{x: 0,y: 88},{x: 32,y: 88},{x: 64,y: 88}],
+						right: [{x: 0,y: 152},{x: 32,y: 152},{x: 64,y: 152}],
+						up: [{x: 0,y: 216},{x: 32,y: 216},{x: 64,y: 216}],
 					}
 				})
 
-				$.filed.enemy_manager.max_num = 1;
+				$.filed.enemy_manager.max_num = 2;
 				$.filed.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
 				$.filed.enemys.map(function (enemy) {
 					$.game.add_enemy(enemy);
 					enemy.on("enter_frame", function () {
+						this.frame += 1;
 						let player_x = Math.floor($.player.x / $.filed.sprite_w) * $.filed.sprite_w;
 						let player_y = Math.floor($.player.y / $.filed.sprite_h) * $.filed.sprite_h;
-						if($.core.frame === 1){
+						if($.core.frame % 30 === 0 || $.core.frame === 1){
 							enemy.generate_effect_map($.core.w, $.core.h, player_x, player_y)
-							// this.move(command);
 						}
+						enemy.move = function (){
+							let input = this.input || "down";
+							this.tile_x = this.type.frame[input][1].x;
+							this.tile_y = this.type.frame[input][1].y;
+							if(this.is_moveing){
+								switch(this.frame % 6){
+									case 2:
+									case 3:
+										this.tile_x = this.type.frame[input][0].x;
+										this.tile_y = this.type.frame[input][0].y;
+										break;
+									case 4:
+									case 5:
+										this.tile_x = this.type.frame[input][2].x;
+										this.tile_y = this.type.frame[input][2].y;
+										break;
+								}
+								this.move_by(this.x_movement, this.y_movement);
+								let id = $.game.filed_id;
+								let filed = $.game.entity.filed[id];
+								if((this.x % filed.sprite_w === 0) && (this.y % filed.sprite_h === 0)){
+									this.is_moveing = false;
+									this.commands.shift();
+									$.player.intersect(this);
+								}
+							}else{
+								this.x_movement = 0;
+								this.y_movement = 0;
+								this.command = this.commands[0];
+								switch(this.command){
+									case "up":
+										this.y_movement = -1;
+										this.input = "up"
+										break;
+									case "left":
+										this.x_movement = -1
+										this.input = "left"
+										break;
+									case "right":
+										this.x_movement = 1
+										this.input = "right"
+										break;
+									case "down":
+										this.y_movement = 1
+										this.input = "down"
+										break;
+								}
+
+								if(this.x_movement || this.y_movement){
+									let x = this.x + (this.x_movement ? this.x_movement / Math.abs(this.x_movement) * 16: 0);
+									let y = this.y + (this.y_movement ? this.y_movement / Math.abs(this.y_movement) * 16: 0);
+									let id = $.game.filed_id;
+									let filed = $.game.entity.filed[id];
+									let multi_x = this.tile_w / 16;
+									let multi_y = this.tile_h / 16;
+									let diff_x = multi_x * 16;
+									let diff_y = multi_y * 16;
+									if(0 <= x && x < 512 - diff_x && 
+										0 <= y && y < 512 - diff_y && 
+										!filed.is_hit(x, y, multi_x, multi_y)){
+										for(let i = 0, len = $.filed.enemys.length; i < len; i += 1){
+											if($.filed.enemys[i] !== this){
+												if($.filed.enemys[i].x !== x || $.filed.enemys[i].y !== y){
+													this.is_moveing = true;
+													this.move();
+												}
+											};
+										}
+									}
+								}
+							}
+						}
+						enemy.move();
 					})
 				})
 

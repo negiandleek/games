@@ -732,7 +732,7 @@
 		rewind() {
 			this.frame = 0;
 			this.last = new Date().getTime;
-			this.game_object = null;
+			this.start();
 		}
 		add_game(obj) {
 			if(Game.is_dict(obj) && obj !== this.game_object){
@@ -944,6 +944,8 @@
 			this.num = 0;
 			this.enemys = [];
 			this.field = field;
+			this.map = [];
+			this.commands = [];
 		}
 		generate_position(range_x, range_y, name) {
 			let y = Math.floor(Math.random() * range_x / this.field.sprite_w) * this.field.sprite_w;
@@ -978,56 +980,138 @@
 		disappear_enemy() {
 
 		}
-		move(arr) {
-			if(Game.is_array(arr)){
-
-			}
-		}
 		generate_effect_map(map_w, map_h, target_x, target_y) {
+			let map = [];
 			let column = map_h / 16;
 			let row = map_w / 16;
-			let map = []
+
 			for(let i = 0; i < column; i += 1){
 				map[i] = [];
 				for(let j = 0; j < row; j += 1){
-					map[i].push(new Game.EffectMap());
+					map[i][j] = new Game.EffectMap();
 				}
 			}
+
 			let subject = this.detect_position(this.x, this.y);
 			let target = this.detect_position(target_x, target_y);
+
+			// 初期化
+			map[subject.v][subject.h].cost = 0;
 			map[target.v][target.h].target = true;
 
-			function dijkstra(v, h, previous_v, previous_h) {
-			    let flag = true;
-			    if(previous_v == null && previous_h == null){
-			    	map[v][h].cost = 0;
-			    }else if(map[v][h].cost < 0){
-			       map[v][h].cost += 1;
-			       map[v][h].previous = {v: v, h: h}
-			    }else{
-			        let _cost = map[previous_h][previous_v] + 1;
-			        if(map[v][h].cost > _cost){
-			            map[v][h].cost = _cost;
-			            map[v][h].previous = {v: v, h: h}
-			        }else{
-			            flag = false;
+			let dijkstra = function () {
+			    while(true){
+			        let process_node = null;
+			        let index = {i: 0, j: 0};
+			       
+			        for(let i=0; i<column; i+=1){
+			           
+			            for(let j=0; j<row; j+=1){
+			                let node = map[i][j];
+			                
+			                if(node.done || node.cost < 0){
+			                    continue;
+			                }
+			                
+			                if(!process_node){
+			                    process_node = node;
+			                    index.i = i;
+			                    index.j = j;
+			                    continue;
+			                }
+			                
+			                if(node.cost < process_node.cost){
+			                    process_node = node;
+			                    index.i = i;
+			                    index.j = j;
+			                }
+			                
+			            }
 			        }
-			    }
-			    for(let i = 1; i<= 2; i += 1){
-			        for(let j = 1; j <= 2; j += 1){
-			            let _v = 1 - (1 % 2) * 2;
-			            let _h = 1 - (1 % 2) * 2;
-			            if(0 <= _v && _v < row && 0 <= _h && _h <= column && flag){
-			                dijkstra(_v,_h, v, h);
+			        
+			        if(!process_node){
+			            break;
+			        }
+			        
+			        process_node.done = true;
+			        
+			        for(let k = 0; k < 4; k += 1){
+			            let v = index.i;
+			            let h = index.j;
+			            switch(k){
+			              case 0:
+			                v -= 1;
+			                break;
+			              case 1:
+			                h += 1;
+			                break;
+			              case 2:
+			                v += 1;
+			                break;
+			              case 3:
+			                h -= 1;
+			                break;
+			            }
+			            
+			            if(0 <= v && v < row && 0 <= h && h < column){
+			                let node = map[v][h];
+			                let cost = process_node.cost + map[v][h].edge;
+			                
+			                if((node.cost < 0) || (node.cost > cost)){
+			                    node.cost = cost;
+			                    node.previous = {
+			                        v: index.i,
+			                        h: index.j
+			                    };
+			                }
 			            }
 			        }
 			    }
+			    this.map = map;
 			}
-			dijkstra(subject.v, subject.h);
+			dijkstra.call(this);
+			this.route(column,row);
+		}
+		route(column, row) {
+			let target_node = null;
+		    let v,h;
+		    this.commands = [];
+		    for(let i = 0; i < column; i+=1){
+		        for(let j = 0; j<row; j += 1){
+		            let node = this.map[i][j];
+		            if(!node.target){
+		                continue;
+		            };
+		            v = i;
+		            h = j;
+		        }
+		    }
+		    
+		    while(1){
+		        if(!this.map[v][h].previous){
+		            break;
+		        };
+		        
+		        let previous_v = this.map[v][h].previous.v;
+		        let previous_h = this.map[v][h].previous.h;
+		        
+		        if(previous_v - v > 0){
+		            this.commands.unshift("up");
+		        }else if(previous_v - v < 0){
+		            this.commands.unshift("down");
+		        }else if(previous_h - h > 0){
+		            this.commands.unshift("left");
+		        }else if(previous_h - h < 0){
+		            this.commands.unshift("right");
+		        }
+		        
+		        v = previous_v;
+		        h = previous_h;
+		    }
 		}
 		detect_position(x, y) {
-			let vertical = y / 16;
-			let horizontal = x / 16;
+			let vertical = Math.floor(y / 16);
+			let horizontal = Math.floor(x / 16);
 			return {v: vertical, h: horizontal};
 		}
 	}
@@ -1035,6 +1119,8 @@
 	Game.EffectMap = class EffectMap {
 		constructor(){
 			this.cost = -1;
+			this.edge = 1;
+			this.done = false;
 			this.previous;
 			this.target = false;
 		}
@@ -1047,12 +1133,15 @@
 			Game.extend(this, Game.EnemyTypeManage.get_type(type), true)
 			this.x = x;
 			this.y = y;
-			this.width = 32;
-			this.height = 48;
-			this.tile_x = this.type.frame.down[0].x;
+			this.tile_x = this.type.frame.down[2].x;
 			this.tile_y = this.type.frame.down[0].y;
-			this.tile_w = this.type.tile_w;
-			this.tile_h = this.type.tile_h;
+			this.width = this.tile_w = this.type.tile_w;
+			this.height = this.tile_h = this.type.tile_h;
+			this.frame = 0;
+		}
+		move_by(x, y) {
+			this.x = this.x + x;
+			this.y = this.y + y;
 		}
 	}
 
@@ -1141,7 +1230,7 @@
 					return true;
 				};
 			}
-			return false;
+			return false
 		}
 	}
 
@@ -1153,7 +1242,7 @@
 			this.img;
 			this.life;
 			this.x = 16;
-			this.y = 16;
+			this.y = 32;
 			// TODO:タイルのほうがわかりやすい
 			this.sprite_w = w || 16;
 			this.sprite_h = h || 16;
@@ -1170,6 +1259,14 @@
 		move_by(x, y) {
 			this.x = this.x + x;
 			this.y = this.y + y
+		}
+		intersect(target){			
+			if(Math.abs(this.x - target.x) < this.sprite_w / 2 + target.tile_w 
+				&&  
+				Math.abs(this.y - target.y) < this.sprite_h / 2 + target.tile_h
+			){
+				console.log("hit");
+			}
 		}
 		// なくても問題ない
 		generate_view_pt(_direction){
@@ -1209,13 +1306,7 @@
 		constructor(width, height) {
 			super();
 			this.img;
-			if(constant == null || constant == "single"){
-				this.sprite_type = "single";
-			}else if(constant === "multiple"){
-				this.sprite_type = constant;
-			}else{
-				throw new Error("TypeError: constant is not type");
-			}
 		}
 	}
+
 })();
