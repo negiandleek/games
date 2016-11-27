@@ -41,19 +41,36 @@ import "./game"
 	window.addEventListener("DOMContentLoaded",()=>{
 		$.core.setup("touch_move", "touch_end");
 		
-		// title menu用のシーンを作成する
+		// Gameオブジェクト外シーンを作成する
 		let title_menu = new Game.OutScene("title_menu",create_title_menu());
 		title_menu.on("change_scene", function (e) {
+			console.log($.core.state);
 			if($.core.state === "title_menu"){
-				$.core.root_node.style.display = "block";
-			}else{
-				$.core.root_node.style.display = "none";
+				$.core.show_if();
+				this.show();
+			}else if($.core.state !== "gameover_menu"){
+				$.core.hide_if();
+				this.hide();
+			}
+		})
+
+		let gameover_menu = new Game.OutScene("gameover_menu",create_gameover_menu());
+		gameover_menu.on("change_scene", function (e) {
+			if($.core.state === "gameover_menu"){
+				let {m,s} = Game.conversion_time($.core.elapsed_time, true);
+				this.dom[2].innerHTML = "SCORE: " + m + s;
+				$.core.show_if();
+				this.show();
+			}else if($.core.state !== "title_menu"){
+				$.core.hide_if();
+				this.hide();
 			}
 		})
 		
-		// coreにtitle menuシーンを追加
+		// coreに外シーンシーンを追加
 		$.core.add_scene(title_menu);
-
+		$.core.add_scene(gameover_menu)
+		
 		// タイトル画面を表示するためのstate
 		$.core.store_game_state("title_menu");
 
@@ -72,7 +89,7 @@ import "./game"
 				$.player = render_player($.game);
 				$.game.add_player($.player);
 				$.player.on("enter_frame", function () {
-					$.player.move();
+					this.move();
 				})
 
 				$.player.move = function() {
@@ -155,7 +172,7 @@ import "./game"
 					}
 				})
 
-				$.filed.enemy_manager.max_num = 2;
+				$.filed.enemy_manager.max_num = 10;
 				$.filed.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
 				$.filed.enemys.map(function (enemy) {
 					$.game.add_enemy(enemy);
@@ -189,7 +206,11 @@ import "./game"
 								if((this.x % filed.sprite_w === 0) && (this.y % filed.sprite_h === 0)){
 									this.is_moveing = false;
 									this.commands.shift();
-									$.player.intersect(this);
+									// FIXED: 当たり判定バグ
+									if($.player.is_intersect(this)){
+										$.core.stop();
+										$.core.store_game_state("gameover_menu");
+									};
 								}
 							}else{
 								this.x_movement = 0;
@@ -241,6 +262,17 @@ import "./game"
 						enemy.move();
 					})
 				})
+					
+				// Gameオブジェクト内のシーンを作成する
+				$.game.show_ui();
+				let display_score = new Game.InScene("score",create_score());
+				display_score.show();
+				display_score.on("enter_frame", function (e){
+					let {m,s} = Game.conversion_time($.core.elapsed_time, true);
+					this.parent_node.innerHTML = m + s;
+				})
+
+				$.game.add_scene(display_score);
 
 				// fpsを開始する
 				$.core.start();
@@ -293,7 +325,7 @@ import "./game"
 
 		title_menu[3].addEventListener(sprt.TOUCH_START, (e)=> {
 			e.stopPropagation();
-			$.core.store_game_state("setting");
+			$.core.store_game_state("loading");
 		})
 
 		// TODO:enchant参考にする
@@ -313,6 +345,44 @@ import "./game"
 		});
 
 		return title_menu;
+	}
+
+	function create_gameover_menu() {
+		let gameover_menu = [];
+		gameover_menu.push(document.querySelector(".gameover-menu"));
+		gameover_menu.push(gameover_menu[0].children[0]);
+		gameover_menu.push(gameover_menu[0].children[1]);
+		gameover_menu.push(gameover_menu[0].children[2]);
+
+		$.core.root_node.addEventListener(sprt.TOUCH_START, (e) => {
+			$.last_touch_target = gameover_menu[0];
+			e.stopPropagation();
+		})
+		
+		gameover_menu[2].addEventListener(sprt.TOUCH_START, (e)=> {
+			e.stopPropagation();
+			$.core.rewind()
+			$.core.store_game_state("loading");
+		})
+
+		document.addEventListener("keydown", (e)=> {
+			if($.last_touch_target === gameover_menu[0]){
+				let key_code = e.keyCode;
+				// up key 38 down key 40;
+				if(key_code === 13){
+					$.core.rewind();
+					$.core.store_game_state("loading");
+				}
+			}
+		});
+
+		return gameover_menu;
+	}
+
+	function create_score () {
+		let score_elem = document.querySelector(".score");
+
+		return score_elem;
 	}
 }());
 

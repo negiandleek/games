@@ -4,6 +4,10 @@
 	let Game = {};
 	root.Game = Game;
 
+	// TODO:current sceneという概念を取り入れる
+	// そのためにpush scene と pop sceneがGame.coreとGame.gameに必要
+	// Game.game field にもcurrnetという概念を取り入れる
+
 	// init variable
 	Game.assets = {};
 	Game.sprt = (function () {
@@ -137,6 +141,22 @@
 		}
 		return collections;
 	};
+
+	Game.conversion_time = function (num, zero) {
+		let h = Math.floor(num / (60 * 60 * 1000));
+		num = num - h * 60 * 60 * 1000;
+		let m = Math.floor(num / (60  * 1000));
+		num = num - m * 60 * 1000;
+		let s = Math.floor(num / 1000);
+
+		if(zero){
+			h = ("0" + h).slice(-2);
+			m = ("0" + m).slice(-2);
+			s = ("0" + s).slice(-2);
+		}
+
+		return{h, m, s}
+	}
 
 	Game.extend = function(context, obj, instead){
 		let astr = "[object Array]";
@@ -470,6 +490,12 @@
 			this.canvas[len].height = this.h;
 			this.context.push(this.canvas[len].getContext("2d"));
 		}
+		show_if() {
+			this.root_node.style.display = "block";
+		}
+		hide_if() {
+			this.root_node.style.display = "none";
+		}
 		static diff_back(object) {
 			if(!this.cache_back){
 				let t = {};
@@ -606,7 +632,7 @@
 			this.state = "init";
 			this.last_touch_target
 			this.running = false;
-			this.input;
+			this.elapsed_time = 0;
 			// document.addEventListener(Game.sprt.TOUCH_START, (e) => {
 			// 	this.last_touch_target = e.target;
 			// })
@@ -686,7 +712,6 @@
 					things[i].dispatch_event(e);
 					// this.next_frame(things[i]);
 				}
-
 				for(let i = 0, len = scenes.length; i < len; i += 1){
 					scenes[i].dispatch_event(e);
 					// this.next_fore_frame(scenes[i]);
@@ -711,9 +736,11 @@
 			super.init();
 		}
 		start() {
-			let now = new Date().getTime;
+			let now = Game.now();
 			let diff = now - this.last;
-			
+
+			this.running = true;
+
 			if(this.animation != null){
 				return;
 			}
@@ -727,11 +754,11 @@
 		}
 		stop() {
 			cansel_animation_frame(this.animation);
-			this.animation
+			this.running = false;
 		}
 		rewind() {
 			this.frame = 0;
-			this.last = new Date().getTime;
+			this.last = Game.now();
 			this.start();
 		}
 		add_game(obj) {
@@ -739,9 +766,8 @@
 				this.game_object = obj;
 			}
 		}
-		// TODO: add_gameと同じようにする
 		add_scene(obj){
-			if(Game.is_dict(obj) && obj !== this.scene_object){
+			if(Game.is_dict(obj)){
 				this.scene_object.push(obj);
 			}
 		}
@@ -756,6 +782,10 @@
 					this.next_frame();
 				}
 			}
+			if(!this.running){
+				return false;
+			}
+			this.elapsed_time = Game.now() - this.last;
 			this.animation = request_animation_frame(this.main.bind(this));
 		}
 		next_frame() {
@@ -783,8 +813,14 @@
 	Game.OutScene = class extends Game.EventTarget{
 		constructor(type, dom){
 			super();
-			this.entity = dom
+			this.dom = dom
 			this.type = type;
+		}
+		show(){
+			this.dom[0].style.display = "block";
+		}
+		hide(){
+			this.dom[0].style.display = "none";
 		}
 	}
 	// ゲーム内のシーンを作成（ステータス、イベントリ）
@@ -795,17 +831,24 @@
 			this.type = type;
 		}
 	}
-	// Game.Blockを一つにまとめて管理するクラス
+	// Game.Blockを一つにまとめて管理するクラス(ステータスとイベントリを表示するメニュー画面)
 	Game.InScene = class extends Game.Block{
 		constructor(type, dom){
 			super();
-			this.entity = dom
+			this.parent_node = dom;
+			this.child_node = [];
 			this.type = type;
 		}
-		// add(dom){
-		// 	//TODO: domかどうか調べる
-		// 	this.entity.push(obj);
-		// }
+		add(dom){
+			//TODO: domかどうか調べる
+			this.child_node.push(dom);
+		}
+		show(){
+			this.parent_node.style.display = "block";
+		}
+		hide(){
+			this.parent_node.style.display = "hide";
+		}
 	}
 
 	// ゲームが使用する全体のオブジェクトを管理する
@@ -831,9 +874,17 @@
 				// square_idでフィールドと結びつけた(rpgにおける敵、ツボのなかのアイテムなどの)オブジェクトは画面上から隠す
 				// もしくは(npc, enemyなどの)idを持っているオブジェクトは画面上に表示する
 				filed: [],
-				enemy: []
+				enemy: [],
+				scene: []
 			}
 			this.enemy_type = Game.EnemyTypeManage;
+			this.root_game_scene = document.getElementById("ui");
+		}
+		show_ui(){
+			this.root_game_scene.style.display = "block";
+		}
+		hide_ui(){
+			this.root_game_scene.style.display = "none";
 		}
 		// 現在のゲームが管理するものを追加する
 		add_player(obj) {
@@ -854,6 +905,13 @@
 			if(Game.is_dict(obj)){
 				if(obj instanceof Game.Enemy){
 					this.entity.enemy.push(obj);
+				}
+			}
+		}
+		add_scene(dict){
+			if(Game.is_dict(dict)){
+				if(dict instanceof Game.InScene){
+					this.entity.scene.push(dict);
 				}
 			}
 		}
@@ -1260,12 +1318,12 @@
 			this.x = this.x + x;
 			this.y = this.y + y
 		}
-		intersect(target){			
+		is_intersect(target){			
 			if(Math.abs(this.x - target.x) < this.sprite_w / 2 + target.tile_w 
-				&&  
-				Math.abs(this.y - target.y) < this.sprite_h / 2 + target.tile_h
-			){
-				console.log("hit");
+				&&  Math.abs(this.y - target.y) < this.sprite_h / 2 + target.tile_h){
+				return true;
+			}else{
+				return false;
 			}
 		}
 		// なくても問題ない

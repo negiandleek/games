@@ -1,4 +1,4 @@
-.title_menu{
+.gameover-menu{
 	display: none;
 	position: absolute;
 	width: 80%;
@@ -15,14 +15,19 @@
 			font-size: 2.8em;
 		}
 	}
-	&__start{
+	&__score{
 		padding: 8px 16px;
- 		margin-bottom: 8px;
- 		font-size: 2.3em;
+		margin-bottom: 8px;
+		font-size: 2.5em;
 	}
-	&__setting{
+	&__continue{
 		padding: 8px 16px;
  		margin-bottom: 8px;
- 		font-size: 2.3em;
+ 		font-size: 2.1em;
+	}
+	&__back{
+		padding: 8px 16px;
+ 		margin-bottom: 8px;
+ 		font-size: 2.1em;
 	}
 }
