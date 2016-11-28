@@ -4,10 +4,6 @@
 	let Game = {};
 	root.Game = Game;
 
-	// TODO:current sceneという概念を取り入れる
-	// そのためにpush scene と pop sceneがGame.coreとGame.gameに必要
-	// Game.game field にもcurrnetという概念を取り入れる
-
 	// init variable
 	Game.assets = {};
 	Game.sprt = (function () {
@@ -158,51 +154,29 @@
 		return{h, m, s}
 	}
 
-	Game.extend = function(context, obj, instead){
+	Game.extend = function(destination, source, instead){
 		let astr = "[object Array]";
-		let key;
-		for(key in obj){
-			if(obj.hasOwnProperty(key)){
-				if(obj[key] instanceof HTMLImageElement){
-
-					context[key] = obj[key];
-				}else if(typeof obj[key] === "object"){
-					tmp = toString.call(obj[key] === astr)? []: {};
-					tmp = obj[key];
-					Game.extend(context[key], tmp[key], instead);
+		let toStr = Object.prototype.toString;
+		for(let i in source){
+			if(source.hasOwnProperty(i)){
+				if(source[i] instanceof HTMLImageElement){
+					if(!destination.hasOwnProperty(i) && !instead){
+						throw new Error("ReferenceError: proparty is not defined, Game.js");
+					}
+					destination[i] = source[i];
+				}else if(typeof source[i] === "object"){
+		 	 		destination[i] = (toStr.call(source[i])) == astr ? []: {}
+		  			Game.extend(destination[i], source[i], instead)
 				}else{
-					if(!context.hasOwnProperty(key) && !instead){
-						throw new Error("ReferenceError: key proparty is not defined, Game.js");
+					if(!destination.hasOwnProperty(i) && !instead){
+						throw new Error("ReferenceError: proparty is not defined, Game.js");
 					}
-					context[key] = obj[key];
+		  			destination[i] = source[i]
 				}
 			}
 		}
-			return context;
-		}
-		Game.extend = function(destination, source, instead){
-			let astr = "[object Array]";
-			let toStr = Object.prototype.toString;
-			for(let i in source){
-				if(source.hasOwnProperty(i)){
-					if(source[i] instanceof HTMLImageElement){
-						if(!destination.hasOwnProperty(i) && !instead){
-							throw new Error("ReferenceError: proparty is not defined, Game.js");
-						}
-						destination[i] = source[i];
-					}else if(typeof source[i] === "object"){
-			 	 		destination[i] = (toStr.call(source[i])) == astr ? []: {}
-			  			Game.extend(destination[i], source[i], instead)
-					}else{
-						if(!destination.hasOwnProperty(i) && !instead){
-							throw new Error("ReferenceError: proparty is not defined, Game.js");
-						}
-			  			destination[i] = source[i]
-					}
-				}
-			}
-			return destination;
-		}
+		return destination;
+	}
 
 	let store_progress = function (len) {
 		let i = 0;
@@ -385,7 +359,6 @@
 		return r;
 	}
 
-
 	Game.Event = class {
 		constructor(type) {
 			this.type = type || null;
@@ -418,7 +391,7 @@
 					name: listner.name || "nameless",
 					listner: listner
 				}];
-			}else if(ref.indexOf(listners) === -1){
+			}else if(ref.indexOf("listners") === -1){
 				let handler = {
 					name: listner.name || "nameless",
 					listner: listner
@@ -445,11 +418,17 @@
 		}
 		dispatch_event(e) {
 			let ref = this.__listners[e.type];
-			e.target = this;
+			let self;
+			if(!e.self){
+				e.target = self = this;
+			}else{
+				e.target = self = e.self;
+			}
+			delete e.self;
 			// Coreクラスのイベントをdispatchする
 			if(ref != null){
 				for(let i = 0, len = ref.length; i < len; i += 1){
-					ref[i].listner.call(this, e);
+					ref[i].listner.call(self, e);
 				}
 			}
 		}
@@ -564,10 +543,31 @@
 				// for(let i = 0; i < len; i += 1){
 				// if(diff_key[i] === "player" && entity.player){
 				let p = gmo.entity.player;
-				let id = gmo.player_id;
-				// for(let j = 0,len = p.length; j < len; j += 1){
+				let a = [];
+				let b = [];
+				for(let i = 0, len = p.length; i < len; i += 1){
+					let childs = p[i].child;
+					a = [];
+					a[0] = p[i];
+					for(let j = 0, _len = childs.length; j < _len; j += 1){
+						a[j + 1] = childs[j];
+					}
+					b.push(a);
+				}
+
 				ctx.clearRect(0, 0, 512, 512);
-				ctx.drawImage(p[id].img, p[id].sprite_x, p[id].sprite_y, p[id].sprite_w, p[id].sprite_h, p[id].x, p[id].y, 32, 32);
+
+				for(let i = 0, len = b.length; i < len; i += 1){
+					for(let j = 0, _len = b[i].length; j < _len; j += 1){
+						let tmp = b[i][j];
+						ctx.drawImage(tmp.img,
+							tmp.sprite_x,tmp.sprite_y, 
+							tmp.sprite_w,tmp.sprite_h, 
+							tmp.x, tmp.y,
+							tmp.sprite_w, tmp.sprite_h
+						);
+					}
+				}
 
 				let f = gmo.entity.filed;
 				let fid = gmo.filed_id;
@@ -633,6 +633,13 @@
 			this.last_touch_target
 			this.running = false;
 			this.elapsed_time = 0;
+
+			if(!Game.Core.instance){
+				Game.Core.instance = this;
+			}
+
+			return Game.Core.instance;
+
 			// document.addEventListener(Game.sprt.TOUCH_START, (e) => {
 			// 	this.last_touch_target = e.target;
 			// })
@@ -778,10 +785,25 @@
 			
 			for(let key in entity){
 				for(let i = 0, len = entity[key].length; i < len; i += 1){
+					if(key === "player"){
+						continue;
+					}
 					entity[key][i].dispatch_event(e);
 					this.next_frame();
 				}
 			}
+
+			for(let i = 0, len = entity.player.length; i < len; i += 1){
+				let player = entity.player[i];
+				player.dispatch_event(e);
+				for(let j = 0, _len = player.child.length; j < _len; j += 1){
+					if(_len){
+						// FIX
+						player.child[j].dispatch_event(e);
+					}
+				}
+			}
+
 			if(!this.running){
 				return false;
 			}
@@ -794,8 +816,9 @@
 			this.render_fore();
 		}
 	}
+	Game.Core.instance = null;
 
-	Game.Input = class extends Game.EventTarget{
+	Game.Keyboard = class extends Game.EventTarget{
 		constructor(){
 			super();
 			this.input;
@@ -875,7 +898,7 @@
 				// もしくは(npc, enemyなどの)idを持っているオブジェクトは画面上に表示する
 				filed: [],
 				enemy: [],
-				scene: []
+				scene: [],
 			}
 			this.enemy_type = Game.EnemyTypeManage;
 			this.root_game_scene = document.getElementById("ui");
@@ -887,13 +910,14 @@
 			this.root_game_scene.style.display = "none";
 		}
 		// 現在のゲームが管理するものを追加する
-		add_player(obj) {
-			if(Game.is_dict(obj)){
-				if(obj instanceof Game.Player){
-					this.entity.player.push(obj);
+		add_player(dict) {
+			if(Game.is_dict(dict)){
+				if(dict instanceof Game.Player){
+					this.entity.player.push(dict);
 				}
 			}
 		}
+		remove_player(dict) {}
 		add_filed(obj) {
 			if(Game.is_dict(obj)){
 				if(obj instanceof Game.Filed){
@@ -1028,11 +1052,14 @@
 		appear_enemy(range_x, range_y, _type) {
 			let type = _type || "zombie1";
 			let num = this.max_num - this.num;
-			for(let i = 0; i < num; i += 1){
-				if(!this.enemys[i]){
-					let {x,y} = this.generate_position(range_x, range_y, type);
-					this.enemys[i] = new Game.Enemy(type, x, y);
-				}
+			let len = this.enemys.length;
+			if(len < this.max_num){
+				let {x,y} = this.generate_position(range_x, range_y, type);
+				this.enemys[len] = new Game.Enemy(type, x, y);
+				this.enemys[len].add(this.field);
+				return len;
+			}else{
+				return -1
 			}
 		}
 		disappear_enemy() {
@@ -1042,7 +1069,6 @@
 			let map = [];
 			let column = map_h / 16;
 			let row = map_w / 16;
-
 			for(let i = 0; i < column; i += 1){
 				map[i] = [];
 				for(let j = 0; j < row; j += 1){
@@ -1125,8 +1151,27 @@
 			            }
 			        }
 			    }
-			    this.map = map;
+				let normalize = function (map) {
+					let max_cost = 0;
+					for(let i = 0; i < column; i += 1){
+						for(let j = 0; j < row; j += 1){
+							max_cost = Math.max(max_cost,map[i][j].cost);
+						}
+					}
+					for(let i = 0; i < column; i += 1){
+						for(let j = 0; j < row; j += 1){
+							if(map[i][j] === -1){
+								continue;
+							}
+							map[i][j].cost = Math.floor((map[i][j].cost / max_cost) * 100) / 100;
+						}
+					}
+					return map;
+				}
+
+			    this.map = normalize(map);
 			}
+
 			dijkstra.call(this);
 			this.route(column,row);
 		}
@@ -1174,6 +1219,56 @@
 		}
 	}
 
+	Game.Enemy = class Enemy extends Game.EnemyManager{
+		constructor(type, x, y) {
+			super();
+			// TODO: this.enemy_class, this.enemy_class.design
+			let enemy_class = Game.EnemyTypeManage.get_type(type);
+			this.type = enemy_class.type;
+			this.enemy_class = enemy_class;
+			this.x = x;
+			this.y = y;
+			this.tile_x = this.type.frame.down[2].x;
+			this.tile_y = this.type.frame.down[0].y;
+			this.width = this.tile_w = this.type.tile_w;
+			this.height = this.tile_h = this.type.tile_h;
+			this.frame = 0;
+			this.alive = true;
+			this.running = true;
+
+		}
+		move_by(x, y) {
+			this.x = this.x + x;
+			this.y = this.y + y;
+		}
+		add(source){
+			this.enemy_class.notify_appear_enemy.call(this, source);
+		}
+	}
+
+	Game.InfruenceMap = class InfruenceMap{
+		constructor(){
+			this.nodes = [];
+			this.column = 512 / 16;
+			this.row = 512 / 16;
+			for(let i = 0; i < this.column; i += 1){
+				this.nodes[i] = [];
+				for(let j = 0; j < this.row; j += 1){
+					this.nodes[i][j] = 0;
+				}
+			}
+		}
+		normalization(){}
+		product_sum(map, factor){
+			for(let i = 0; i < this.column; i += 1){
+				for(let j = 0; j < this.row; j += 1){
+					this.nodes[i][j] = this.nodes[i][j] + map[i][j].cost * factor;
+				}
+			}
+		}
+	}
+
+	// InfruenceMapNode
 	Game.EffectMap = class EffectMap {
 		constructor(){
 			this.cost = -1;
@@ -1184,34 +1279,26 @@
 		}
 	}
 
-	Game.Enemy = class Enemy extends Game.EnemyManager{
-		constructor(type, x, y) {
-			super();
-			this.type = {};
-			Game.extend(this, Game.EnemyTypeManage.get_type(type), true)
-			this.x = x;
-			this.y = y;
-			this.tile_x = this.type.frame.down[2].x;
-			this.tile_y = this.type.frame.down[0].y;
-			this.width = this.tile_w = this.type.tile_w;
-			this.height = this.tile_h = this.type.tile_h;
-			this.frame = 0;
-		}
-		move_by(x, y) {
-			this.x = this.x + x;
-			this.y = this.y + y;
-		}
-	}
-
-	Game.InputEnemyType = class EnemyTypeManage extends Game.EventTarget{
+	Game.InputEnemyType = class InputEnemyType extends Game.EventTarget{
 		constructor(){
 			super();
 		}
-		notify_appear_enemy() {
-
+		notify_add_type() {
+			let e = new Game.Event("add_enemy_type");
+			Game.Core.instance.dispatch_event(e);
 		}
-		notify_appear_enemy() {
-
+		notify_remove_type() {
+			let e = new Game.Event("remove_enemy_type");
+			Game.Core.instance.dispatch_event(e);
+		}
+		notify_appear_enemy(source) {
+			let e = new Game.Event("appear_enemy");
+			e.self = this;
+			source.dispatch_event(e);
+		}
+		notify_disappear_enemy() {
+			let e = new Game.Event("disappear_enemy");
+			Game.Core.instance.dispatch_event(e);
 		}
 	} 
 
@@ -1250,6 +1337,7 @@
 	Game.Filed = class Filed extends Game.EventTarget{
 		constructor(w, h, sw, sh) {
 			super();
+			this.frame = 0;
 			this.img;
 			this.img_pt;
 			this.csv;
@@ -1293,7 +1381,7 @@
 	}
 
 	Game.Player = class Player extends Game.EventTarget{ 
-		constructor(w, h, constant) {
+		constructor(w, h) {
 			super();
 			// スプライトを変更する時などに用いる
 			this.change = false;
@@ -1306,6 +1394,8 @@
 			this.sprite_h = h || 16;
 			this.sprite_x = 0;
 			this.sprite_y = 0;
+			this.child = [];
+			this.frame = 0;
 			// if(constant == null || constant == "single"){
 			// 	this.sprite_type = "single";
 			// }else if(constant === "multiple"){
@@ -1324,6 +1414,24 @@
 				return true;
 			}else{
 				return false;
+			}
+		}
+		add_child(dict) {
+			if(Game.is_dict(dict)){
+				if(dict instanceof Game.Player){
+					this.child.push(dict);
+				}
+			}
+		}
+		remove_child(dict){
+			let i;
+			if(Game.is_dict(dict) && dict instanceof Game.Player){
+				if((i = this.child.indexOf(dict)) != -1){
+					this.child.splice(i, 1);
+					if(!this.child){
+						this.child = []
+					}
+				}
 			}
 		}
 		// なくても問題ない
