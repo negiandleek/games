@@ -56,6 +56,7 @@
 		return sprt;
 	})();
 
+	let keys = Object.keys; 
 	let Obj_proto = Object.prototype;
 	let Arr_proto = Array.prototype;
 	let Func_proto = Function.prototype;
@@ -497,8 +498,8 @@
 			// let len = diff_key.length;
 			if(this.state === "playing"){
 				// for(let i = 0; i < len; i += 1){
-				let id = gmo.filed_id;
-				let f =  gmo.entity.filed[id];
+				let id = gmo.current_id;
+				let f =  gmo.entity.stage[id].field;
 				// if(diff_key[i] === "filed" && f){
 				let index = 0;
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -542,6 +543,10 @@
 				// if(len !== 0){
 				// for(let i = 0; i < len; i += 1){
 				// if(diff_key[i] === "player" && entity.player){
+				
+				ctx.clearRect(0, 0, 512, 512);
+				
+				// playerに関する描画
 				let p = gmo.entity.player;
 				let a = [];
 				let b = [];
@@ -555,7 +560,6 @@
 					b.push(a);
 				}
 
-				ctx.clearRect(0, 0, 512, 512);
 
 				for(let i = 0, len = b.length; i < len; i += 1){
 					for(let j = 0, _len = b[i].length; j < _len; j += 1){
@@ -569,13 +573,13 @@
 					}
 				}
 
-				let f = gmo.entity.filed;
-				let fid = gmo.filed_id;
-				let entitys = f[fid].enemys;
-				for(let i = 0, len = entitys.length; i < len; i += 1){
-					ctx.drawImage(entitys[i].type.img, 
-						entitys[i].tile_x, entitys[i].tile_y, entitys[i].tile_w, entitys[i].tile_h,
-						entitys[i].x, entitys[i].y, entitys[i].width, entitys[i].height);
+				// player以外の描画
+				let id = gmo.current_id;
+				let s = gmo.entity.stage[id];
+				for(let i = 0, len = s.enemys.length; i < len; i += 1){
+					ctx.drawImage(s.enemys[i].type.img, 
+						s.enemys[i].tile_x, s.enemys[i].tile_y, s.enemys[i].tile_w, s.enemys[i].tile_h,
+						s.enemys[i].x, s.enemys[i].y, s.enemys[i].width, s.enemys[i].height);
 				}
 				// 			}
 				// 		}
@@ -633,6 +637,10 @@
 			this.last_touch_target
 			this.running = false;
 			this.elapsed_time = 0;
+
+			// タイトル画面やコンテニュー画面などのout scenesを管理する
+			this.current_out_scene = null;
+			this.out_scenes = [];
 
 			if(!Game.Core.instance){
 				Game.Core.instance = this;
@@ -704,6 +712,7 @@
 				}
 			}
 		}
+		// FIX:削除
 		// init, title_menu,loading, paly, gameover, continue_menu, setting
 		store_game_state(type) {
 			// coreのstateが変わったらchange_sceneイベントを発行する
@@ -711,7 +720,7 @@
 				this.state = type;
 				let e = new Game.Event("change_scene");
 				let things = this.game_object;
-				let scenes = this.scene_object;
+				// let scenes = this.scene_object;
 
 				this.dispatch_event(e);
 
@@ -719,10 +728,10 @@
 					things[i].dispatch_event(e);
 					// this.next_frame(things[i]);
 				}
-				for(let i = 0, len = scenes.length; i < len; i += 1){
-					scenes[i].dispatch_event(e);
-					// this.next_fore_frame(scenes[i]);
-				}
+				// for(let i = 0, len = scenes.length; i < len; i += 1){
+				// 	scenes[i].dispatch_event(e);
+				// 	// this.next_fore_frame(scenes[i]);
+				// }
 			
 				if(type === "playing"){
 					this.running = true;
@@ -773,25 +782,59 @@
 				this.game_object = obj;
 			}
 		}
-		add_scene(obj){
-			if(Game.is_dict(obj)){
-				this.scene_object.push(obj);
+		push_out_scene(dict){
+			if(Game.is_dict(dict) && dict instanceof Game.OutScene){
+				if(this.current_out_scene){
+					this.current_out_scene.dispatch_event(new Game.Event("exit"));
+				}
+				this.current_out_scene = dict;
+				this.current_out_scene.dispatch_event(new Game.Event("enter"));
+				return this.out_scenes.push(dict);
+			}
+		}
+		pop_out_scene() {
+			if(!this.current_out_scene){
+				return this.current_out_scene;
+			}
+			this.current_out_scene.dispatch_event(new Game.Event("exit"));
+			this.remove_out_scene(this.current_out_scene);
+			this.current_out_scene = this.out_scenes[this.out_scenes.length - 1];
+			if(this.current_out_scene){
+				this.current_out_scene.dispatch_event(new Game.Event("enter"));
+			}
+		}
+		remove_out_scene(dict){
+			if(Game.is_dict(dict) && dict instanceof Game.OutScene){
+				if(this.currnet_out_scene === dict){
+					return this.current_out_scene;
+				}else{
+					let i = this.out_scenes.indexOf(dict);
+					if(i !== -1){
+						this.out_scenes.splice(i, 1);
+						return this.out_scenes;
+					}else{
+						return null;
+					}
+				}
 			}
 		}
 		main(time){
 			let e = new Game.Event("enter_frame");
 			let entity = this.game_object.entity;
+			let id = this.game_object.current_id;
 			this.frame = this.frame + 1;
-			
-			for(let key in entity){
-				for(let i = 0, len = entity[key].length; i < len; i += 1){
-					if(key === "player"){
-						continue;
-					}
-					entity[key][i].dispatch_event(e);
-					this.next_frame();
-				}
+
+			entity.stage[id].dispatch_event(e);
+
+			let enemys = entity.stage[id].enemys;
+			for(let i = 0, len = enemys.length; i < len; i += 1){
+				enemys[i].dispatch_event(e);
+				this.next_frame();
 			}
+
+			let field = entity.stage[id].field;
+			field.dispatch_event(e);
+			this.next_frame();
 
 			for(let i = 0, len = entity.player.length; i < len; i += 1){
 				let player = entity.player[i];
@@ -885,19 +928,24 @@
 				x: x || 0,
 				y: y || 0
 			};
+			// this.filed_id -> current_stage_id;
 			this.filed_id = 0;
-			this.player_id = 0;
-			// this.item_id;
-			// this.level;
+			this.current_id = 0;
 			this.source = [];
 			this.entity = {
 				player: [],
+				// stage: {
+				// 	1:[filed: , enemy, enemy, enemy, item, item],
+				// 	2:[],
+				// }
+				stage: {},
 				// fieldオブジェクト一つで現在のゲームのオブジェクトを管理する
 				// stage:1-2, dungeon:目覚めの森
 				// square_idでフィールドと結びつけた(rpgにおける敵、ツボのなかのアイテムなどの)オブジェクトは画面上から隠す
 				// もしくは(npc, enemyなどの)idを持っているオブジェクトは画面上に表示する
 				filed: [],
 				enemy: [],
+				// sceneは保留
 				scene: [],
 			}
 			this.enemy_type = Game.EnemyTypeManage;
@@ -910,6 +958,7 @@
 			this.root_game_scene.style.display = "none";
 		}
 		// 現在のゲームが管理するものを追加する
+		// プレイヤーはステージに影響を受けないので独立させる
 		add_player(dict) {
 			if(Game.is_dict(dict)){
 				if(dict instanceof Game.Player){
@@ -918,20 +967,42 @@
 			}
 		}
 		remove_player(dict) {}
-		add_filed(obj) {
-			if(Game.is_dict(obj)){
-				if(obj instanceof Game.Filed){
-					this.entity.filed.push(obj);
-				}
-			}
+		// ステージを管理する
+		push_stage() {
+			let id = Math.random().toString(36).substr(2, 9);
+			this.current_id = id;
+			this.entity.stage[id] = new Game.Stage();
+			return this.entity.stage[id];
 		}
-		add_enemy(obj){
-			if(Game.is_dict(obj)){
-				if(obj instanceof Game.Enemy){
-					this.entity.enemy.push(obj);
-				}
+		remove_stage(remove_id) {
+			if(this.current_id === id){
+				return false;
 			}
+			delete this.entity.stage[id];
+			return this.entity.stage;
 		}
+		current_stage(id) {
+			if(this.current_id === id){
+				return this.entity.stage[this.current_id];
+			}
+
+			this.current_id = id;
+			return this.entity.stage[id];
+		}
+		// add_filed(dict) {
+		// 	if(Game.is_dict(dict)){
+		// 		if(dict instanceof Game.Filed){
+		// 			this.entity.stage[this.current_id].filed = dict;
+		// 		}
+		// 	}
+		// }
+		// add_enemy(dict){
+		// 	if(Game.is_dict(dict)){
+		// 		if(dict instanceof Game.Enemy){
+		// 			this.entity.stage[this.current_id].enemys.push(dict);
+		// 		}
+		// 	}
+		// }
 		add_scene(dict){
 			if(Game.is_dict(dict)){
 				if(dict instanceof Game.InScene){
@@ -1020,12 +1091,12 @@
 	}
 
 	Game.EnemyManager = class MangeEnemy extends Game.EventTarget{
-		constructor(field) {
+		constructor(field, stage) {
 			super();
 			this.max_num = 0;
-			this.num = 0;
 			this.enemys = [];
 			this.field = field;
+			this.stage = stage;
 			this.map = [];
 			this.commands = [];
 		}
@@ -1056,10 +1127,10 @@
 			if(len < this.max_num){
 				let {x,y} = this.generate_position(range_x, range_y, type);
 				this.enemys[len] = new Game.Enemy(type, x, y);
-				this.enemys[len].add(this.field);
-				return len;
+				this.enemys[len].add(this.stage);
+				return this.enemys[len];
 			}else{
-				return -1
+				return false
 			}
 		}
 		disappear_enemy() {
@@ -1151,23 +1222,23 @@
 			            }
 			        }
 			    }
-				let normalize = function (map) {
-					let max_cost = 0;
-					for(let i = 0; i < column; i += 1){
-						for(let j = 0; j < row; j += 1){
-							max_cost = Math.max(max_cost,map[i][j].cost);
-						}
-					}
-					for(let i = 0; i < column; i += 1){
-						for(let j = 0; j < row; j += 1){
-							if(map[i][j] === -1){
-								continue;
-							}
-							map[i][j].cost = Math.floor((map[i][j].cost / max_cost) * 100) / 100;
-						}
-					}
-					return map;
-				}
+				// let normalize = function (map) {
+				// 	let max_cost = 0;
+				// 	for(let i = 0; i < column; i += 1){
+				// 		for(let j = 0; j < row; j += 1){
+				// 			max_cost = Math.max(max_cost,map[i][j].cost);
+				// 		}
+				// 	}
+				// 	for(let i = 0; i < column; i += 1){
+				// 		for(let j = 0; j < row; j += 1){
+				// 			if(map[i][j] === -1){
+				// 				continue;
+				// 			}
+				// 			map[i][j].cost = Math.floor((map[i][j].cost / max_cost) * 100) / 100;
+				// 		}
+				// 	}
+				// 	return map;
+				// }
 
 			    this.map = normalize(map);
 			}
@@ -1235,7 +1306,7 @@
 			this.frame = 0;
 			this.alive = true;
 			this.running = true;
-
+			this.display = true;
 		}
 		move_by(x, y) {
 			this.x = this.x + x;
@@ -1246,30 +1317,124 @@
 		}
 	}
 
-	Game.InfruenceMap = class InfruenceMap{
+	// Game.stageにおく？
+	Game.InfruenceMapManger = class InfruenceMapManger extends Game.EventTarget{
 		constructor(){
-			this.nodes = [];
-			this.column = 512 / 16;
-			this.row = 512 / 16;
+			super();
+		}
+		dijkstra() {
+		    while(true){
+		        let process_node = null;
+		        let index = {i: 0, j: 0};
+		       
+		        for(let i=0; i<this.column; i+=1){
+		           
+		            for(let j=0; j<this.row; j+=1){
+		                let node = this.nodes[i][j];
+		                
+		                if(node.done || node.cost < 0){
+		                    continue;
+		                }
+		                
+		                if(!process_node){
+		                    process_node = node;
+		                    index.i = i;
+		                    index.j = j;
+		                    continue;
+		                }
+		                
+		                if(node.cost < process_node.cost){
+		                    process_node = node;
+		                    index.i = i;
+		                    index.j = j;
+		                }
+		                
+		            }
+		        }
+		        
+		        if(!process_node){
+		            break;
+		        }
+		        
+		        process_node.done = true;
+		        
+		        let yy = [0, -1, 1, 0];
+				let xx = [1, 0, 0, -1];
+		        for(let k = 0; k < 4; k += 1){
+		            let y = index.i;
+		            let x = index.j;
+		            
+		            if(0 <= y + yy[k] && y + yy[k] < this.row &&
+		            	0 <= x + xx[k] && x + xx[k] < this.column){
+		                let node = this.nodes[y + yy[k]][x + xx[k]]
+		                let cost = process_node.cost + this.nodes[y + yy[k]][x + xx[k]].edge;
+		                
+		                this.max_cost = Math.max(this.max_cost, cost);
+
+		                if((node.cost < 0) || (node.cost > cost)){
+		                    node.cost = cost;
+		                    node.previous = {
+		                        v: y,
+		                        h: x
+		                    };
+		                }
+		            }
+		        }
+		    }
+
+		    return this.nodes;
+		}
+		normalization(){
 			for(let i = 0; i < this.column; i += 1){
-				this.nodes[i] = [];
 				for(let j = 0; j < this.row; j += 1){
-					this.nodes[i][j] = 0;
+					if(this.nodes[i][j] === -1){
+						continue;
+					}
+					this.nodes[i][j].cost = Math.floor((this.nodes[i][j].cost / this.max_cost) * 100) / 100;
 				}
 			}
+			return map;
 		}
-		normalization(){}
-		product_sum(map, factor){
+		product_sum(target_nodes, factor){
 			for(let i = 0; i < this.column; i += 1){
 				for(let j = 0; j < this.row; j += 1){
-					this.nodes[i][j] = this.nodes[i][j] + map[i][j].cost * factor;
+					this.infruence_nodes[i][j] = this.infruence_nodes[i][j] + target_nodes[i][j].cost * factor;
 				}
 			}
 		}
 	}
 
-	// InfruenceMapNode
-	Game.EffectMap = class EffectMap {
+	Game.InfruenceMap = class InfruenceMap extends Game.InfruenceMapManger{
+		constructor(core, subject, target){
+			super();
+			this.nodes = [];
+			this.infruence_nodes = [];
+			this.column = core.h / 16;
+			this.row = core.w / 16;
+			this.max_cost = 0;
+
+			for(let i = 0; i < this.column; i += 1){
+				this.nodes[i] = [];
+				this.infruence_nodes[i] = [];
+				for(let j = 0; j < this.row; j += 1){
+					this.nodes[i][j] = new Game.InfruenceMapNode();
+					this.infruence_nodes[i][j] = 0;
+				}
+			}
+
+			// 初期化
+			let sv = Math.floor(subject.x / 16);
+			let sh = Math.floor(subject.y / 16);
+			let tv = Math.floor(target.x / 16);
+			let th = Math.floor(target.y / 16);
+			this.nodes[sv][sh].cost = 0;
+			this.nodes[tv][th].target = true;
+
+			super.dijkstra();
+		}
+	}
+
+	Game.InfruenceMapNode = class InfruenceMapNode{	
 		constructor(){
 			this.cost = -1;
 			this.edge = 1;
@@ -1334,6 +1499,39 @@
 	}
 	Game.EnemyTypeManage.instance = {};
 
+	Game.Stage = class Stage extends Game.EventTarget{
+		constructor(){
+			super();
+			this.enemys = [];
+			this.items = [];
+			this.frame = 0;
+		}
+		add_field(dict) {
+			if(Game.is_dict(dict)){
+				if(dict instanceof Game.Filed){
+					this.field = dict;
+					return this.field;
+				}
+			}
+		}
+		init_enemy() {
+			// enemyのクラスを管理
+			if(!this.enemy_manager){
+				this.enemy_manager = new Game.EnemyManager(this.field, this);
+				// this.enemys = this.enemy_manager.enemys;
+			}
+		}
+		appear_enemy(range_x, range_y){
+			if(!this.enemy_manager){
+				throw("enemyクラスが初期化されていません")
+			}
+			let enemy = this.enemy_manager.appear_enemy(range_x, range_y);
+			if(enemy){
+				this.enemys.push(enemy);
+			}
+		}
+	}
+
 	Game.Filed = class Filed extends Game.EventTarget{
 		constructor(w, h, sw, sh) {
 			super();
@@ -1348,10 +1546,8 @@
 			this.sprite_h = sh || 16;
 			this.collision;
 			// enemyのクラスを管理
-			this.enemy_manager = new Game.EnemyManager(this);
-			this.enemys = this.enemy_manager.enemys;
-			
-			this.items = [];
+			// this.enemy_manager = new Game.EnemyManager(this);
+			// this.enemys = this.enemy_manager.enemys;
 		}
 		// 対象の[x,y]とfiledを元に対象の大きさ[multi_x, multi_y]
 		is_hit(x, y, multi_x, multi_y){

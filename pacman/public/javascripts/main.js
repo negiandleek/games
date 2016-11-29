@@ -41,50 +41,49 @@ import "./game"
 	window.addEventListener("DOMContentLoaded",()=>{
 		$.core.setup("touch_move", "touch_end");
 		
-		// Gameオブジェクト外シーンを作成する
+		// タイトル画面を作成する
 		let title_menu = new Game.OutScene("title_menu",create_title_menu());
-		title_menu.on("change_scene", function (e) {
-			console.log($.core.state);
-			if($.core.state === "title_menu"){
-				$.core.show_if();
-				this.show();
-			}else if($.core.state !== "gameover_menu"){
-				$.core.hide_if();
-				this.hide();
-			}
+	
+		title_menu.on("enter", function (e) {
+			$.core.show_if();
+			this.show();
+		});
+
+		title_menu.on("exit", function (e) {
+			$.core.hide_if();
+			this.hide();
 		})
 
+		$.core.push_out_scene(title_menu);
+
+		// ゲームオーバー画面を作成
 		let gameover_menu = new Game.OutScene("gameover_menu",create_gameover_menu());
-		gameover_menu.on("change_scene", function (e) {
-			if($.core.state === "gameover_menu"){
-				let {m,s} = Game.conversion_time($.core.elapsed_time, true);
-				this.dom[2].innerHTML = "SCORE: " + m + s;
-				$.core.show_if();
-				this.show();
-			}else if($.core.state !== "title_menu"){
-				$.core.hide_if();
-				this.hide();
-			}
+		
+		gameover_menu.on("enter", function (e) {
+			let {m,s} = Game.conversion_time($.core.elapsed_time, true);
+			this.dom[2].innerHTML = "SCORE: " + m + s;
+			$.core.show_if();
+			this.show();
+		})
+
+		gameover_menu.on("exit", function (e) {
+			$.core.hide_if();
+			this.hide();
 		})
 		
-		// coreに外シーンシーンを追加
-		$.core.add_scene(title_menu);
-		$.core.add_scene(gameover_menu)
-		
-		// タイトル画面を表示するためのstate
-		$.core.store_game_state("title_menu");
-
 		// シーンが変わった時のイベントを追加
 		// TODO: ここの処理もっと改善できる(game.onload)
+		// stateで管理するのをやめ、イベントで管理する
 		$.core.on("change_scene", function(e){
 			let state = e.target.state;
 			if(state === "loading"){
 				load(this.game_object);
 			}else if(state === "playing"){
-				// filed
-				$.filed = render_filed($.game, this.w, this.h);
-				$.game.add_filed($.filed);
-
+				$.stage = $.game.push_stage();
+				
+				// field
+				$.field = $.stage.add_field(render_field($.game, this.w, this.h))
+				
 				// player
 				$.player = render_player($.game);
 				$.game.add_player($.player);
@@ -148,9 +147,9 @@ import "./game"
 								break;
 						}
 						this.move_by(this.x_movement, this.y_movement);
-						let id = $.game.filed_id;
-						let filed = $.game.entity.filed[id];
-						if((this.x % filed.sprite_w === 0) && (this.y % filed.sprite_h === 0)){
+						let id = $.game.current_id;
+						let field = $.game.entity.stage[id].field;
+						if((this.x % field.sprite_w === 0) && (this.y % field.sprite_h === 0)){
 							this.is_moveing = false;
 						}
 					}else{
@@ -177,17 +176,17 @@ import "./game"
 						if(this.x_movement || this.y_movement){
 							let x = this.x + (this.x_movement ? this.x_movement / Math.abs(this.x_movement) * 16: 0);
 							let y = this.y + (this.y_movement ? this.y_movement / Math.abs(this.y_movement) * 16: 0);
-							let id = $.game.filed_id;
-							let filed = $.game.entity.filed[id];
-							// playerのspriteサイズとfiledのスプライトサイズの差分を計算
-							// filedサイズ<playerサイズかつplayer%filed=0なら問題ない
-							let multi_x = $.player.sprite_w / filed.sprite_w;
-							let multi_y = $.player.sprite_h / filed.sprite_h;
-							let diff_x = multi_x * filed.sprite_w;
-							let diff_y = multi_y * filed.sprite_h;
-							if(0 <= x && x < filed.width - diff_x && 
-								0 <= y && y < filed.height - diff_y &&
-								!filed.is_hit(x, y, multi_x, multi_y)){
+							let id = $.game.current_id;
+							let field = $.game.entity.stage[id].field;
+							// playerのspriteサイズとfieldのスプライトサイズの差分を計算
+							// fieldサイズ<playerサイズかつplayer%field=0なら問題ない
+							let multi_x = $.player.sprite_w / field.sprite_w;
+							let multi_y = $.player.sprite_h / field.sprite_h;
+							let diff_x = multi_x * field.sprite_w;
+							let diff_y = multi_y * field.sprite_h;
+							if(0 <= x && x < field.width - diff_x && 
+								0 <= y && y < field.height - diff_y &&
+								!field.is_hit(x, y, multi_x, multi_y)){
 								this.is_moveing = true;
 								this.move();
 							}
@@ -195,14 +194,13 @@ import "./game"
 					}
 				}
 				let hoge = null;
-				$.cpu.on("enter_frame", function() {
+				$.cpu.on("enter_frame", function(e) {
 					this.frame += 1;
 					if(this.frame === 1 || this.frame % 25 === 0){
-						this.map = new Game.InfruenceMap();
-						let num = Math.floor(1 / $.filed.enemys.length * 100) / 100;
-						
-						$.filed.enemys.map((enemy) => {
-							this.map.product_sum(enemy.map, num);
+						let num = Math.floor(1 / $.stage.enemys.length * 100) / 100;
+						this.infruence_map = new Game.InfruenceMap($.core, this, $.player)
+						$.stage.enemys.map((enemy) => {
+							this.infruence_map.product_sum(enemy.infruence_map.nodes, num);
 						})
 					}
 					$.cpu.move();
@@ -220,10 +218,10 @@ import "./game"
 						let yy = [1, 0, 0, -1];
 						let x = this.x / 16;
 						let y = this.y / 16;
-						let current = this.map.nodes[y][x];
+						let current = this.infruence_map.infruence_nodes[y][x];
 						let direction = -1;
 						 for (let i = 0; i < 4; i+=1) {
-		                    if (current < this.map.nodes[y + yy[i]][x + xx[i]]) {
+		                    if (current < this.infruence_map.infruence_nodes[y + yy[i]][x + xx[i]]) {
 		                        direction = i;
 		                        break;
 		                    }
@@ -251,17 +249,17 @@ import "./game"
 						if(this.x_movement || this.y_movement){
 							let x = this.x + (this.x_movement ? this.x_movement / Math.abs(this.x_movement) * 16: 0);
 							let y = this.y + (this.y_movement ? this.y_movement / Math.abs(this.y_movement) * 16: 0);
-							let id = $.game.filed_id;
-							let filed = $.game.entity.filed[id];
+							let id = $.game.current_id;
+							let field = $.game.entity.stage[id].field;
 							// playerのspriteサイズとfiledのスプライトサイズの差分を計算
 							// filedサイズ<playerサイズかつplayer%filed=0なら問題ない
-							let multi_x = $.player.sprite_w / filed.sprite_w;
-							let multi_y = $.player.sprite_h / filed.sprite_h;
-							let diff_x = multi_x * filed.sprite_w;
-							let diff_y = multi_y * filed.sprite_h;
-							if(0 <= x && x < filed.width - diff_x && 
-								0 <= y && y < filed.height - diff_y &&
-								!filed.is_hit(x, y, multi_x, multi_y)){
+							let multi_x = $.player.sprite_w / field.sprite_w;
+							let multi_y = $.player.sprite_h / field.sprite_h;
+							let diff_x = multi_x * field.sprite_w;
+							let diff_y = multi_y * field.sprite_h;
+							if(0 <= x && x < field.width - diff_x && 
+								0 <= y && y < field.height - diff_y &&
+								!field.is_hit(x, y, multi_x, multi_y)){
 								this.is_moveing = true;
 								this.move();
 							}
@@ -282,14 +280,13 @@ import "./game"
 						up: [{x: 0,y: 216},{x: 32,y: 216},{x: 64,y: 216}],
 					}
 				})
-				$.filed.enemy_manager.max_num = 3;
-				$.filed.on("appear_enemy", function (e) {
+				$.stage.init_enemy();
+				$.stage.enemy_manager.max_num = 3;
+				$.stage.on("appear_enemy", function (e) {
 					this.on("enter_frame", function () {
 						this.frame += 1;
-						let player_x = Math.floor($.player.x / $.filed.sprite_w) * $.filed.sprite_w;
-						let player_y = Math.floor($.player.y / $.filed.sprite_h) * $.filed.sprite_h;
 						if(this.frame % 30 === 0 || this.frame === 1){
-							this.generate_effect_map($.core.w, $.core.h, player_x, player_y)
+							this.infruence_map = new Game.InfruenceMap($.core, this, $.player)
 						}
 						if(this.running){
 							this.move();
@@ -299,6 +296,7 @@ import "./game"
 						let input = this.input || "down";
 						this.tile_x = this.type.frame[input][1].x;
 						this.tile_y = this.type.frame[input][1].y;
+						// FIX:影響マップにもとづいて動かす
 						if(this.is_moveing){
 							switch(this.frame % 6){
 								case 2:
@@ -313,9 +311,9 @@ import "./game"
 									break;
 							}
 							this.move_by(this.x_movement, this.y_movement);
-							let id = $.game.filed_id;
-							let filed = $.game.entity.filed[id];
-							if((this.x % filed.sprite_w === 0) && (this.y % filed.sprite_h === 0)){
+							let id = $.game.current_id;
+							let field = $.game.entity.stage[id].field;
+							if((this.x % field.sprite_w === 0) && (this.y % field.sprite_h === 0)){
 								this.is_moveing = false;
 								this.commands.shift();
 								// FIXED: 当たり判定バグ
@@ -350,18 +348,18 @@ import "./game"
 							if(this.x_movement || this.y_movement){
 								let x = this.x + (this.x_movement ? this.x_movement / Math.abs(this.x_movement) * 16: 0);
 								let y = this.y + (this.y_movement ? this.y_movement / Math.abs(this.y_movement) * 16: 0);
-								let id = $.game.filed_id;
-								let filed = $.game.entity.filed[id];
+								let id = $.game.current_id;
+								let field = $.game.entity.stage[id].field;
 								let multi_x = this.tile_w / 16;
 								let multi_y = this.tile_h / 16;
 								let diff_x = multi_x * 16;
 								let diff_y = multi_y * 16;
 								if(0 <= x && x < 512 - diff_x && 
 									0 <= y && y < 512 - diff_y && 
-									!filed.is_hit(x, y, multi_x, multi_y)){
-									for(let i = 0, len = $.filed.enemys.length; i < len; i += 1){
-										if($.filed.enemys[i] !== this){
-											if($.filed.enemys[i].x !== x || $.filed.enemys[i].y !== y){
+									!field.is_hit(x, y, multi_x, multi_y)){
+									for(let i = 0, len = $.stage.enemys.length; i < len; i += 1){
+										if($.stage.enemys[i] !== this){
+											if($.stage.enemys[i].x !== x || $.stage.enemys[i].y !== y){
 												this.is_moveing = true;
 												this.move();
 											}
@@ -374,13 +372,10 @@ import "./game"
 
 				})
 
-				$.filed.on("enter_frame", function (e) {
+				$.stage.on("enter_frame", function (e) {
 					this.frame += 1;
 					if(this.frame === 1 || this.frame % 50 === 0){
-						let index = $.filed.enemy_manager.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
-						if(index !== -1){
-							$.game.add_enemy($.filed.enemys[index]);
-						}
+						$.stage.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
 					}
 				})
 					
@@ -409,7 +404,7 @@ import "./game"
 		});
 	}
 
-	function render_filed(context, w, h) {
+	function render_field(context, w, h) {
 		let filed = new Game.Filed(512, 512);
 		filed.img = context.source.images.dungeon;
 		filed.img_pt = Game.create_point(filed.img.width, filed.img.height, 16, 16);
