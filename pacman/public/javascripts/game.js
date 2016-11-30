@@ -1136,158 +1136,158 @@
 		disappear_enemy() {
 
 		}
-		generate_effect_map(map_w, map_h, target_x, target_y) {
-			let map = [];
-			let column = map_h / 16;
-			let row = map_w / 16;
-			for(let i = 0; i < column; i += 1){
-				map[i] = [];
-				for(let j = 0; j < row; j += 1){
-					map[i][j] = new Game.EffectMap();
-				}
-			}
+		// generate_effect_map(map_w, map_h, target_x, target_y) {
+		// 	let map = [];
+		// 	let column = map_h / 16;
+		// 	let row = map_w / 16;
+		// 	for(let i = 0; i < column; i += 1){
+		// 		map[i] = [];
+		// 		for(let j = 0; j < row; j += 1){
+		// 			map[i][j] = new Game.EffectMap();
+		// 		}
+		// 	}
 
-			let subject = this.detect_position(this.x, this.y);
-			let target = this.detect_position(target_x, target_y);
+		// 	let subject = this.detect_position(this.x, this.y);
+		// 	let target = this.detect_position(target_x, target_y);
 
-			// 初期化
-			map[subject.v][subject.h].cost = 0;
-			map[target.v][target.h].target = true;
+		// 	// 初期化
+		// 	map[subject.v][subject.h].cost = 0;
+		// 	map[target.v][target.h].target = true;
 
-			let dijkstra = function () {
-			    while(true){
-			        let process_node = null;
-			        let index = {i: 0, j: 0};
+		// 	let dijkstra = function () {
+		// 	    while(true){
+		// 	        let process_node = null;
+		// 	        let index = {i: 0, j: 0};
 			       
-			        for(let i=0; i<column; i+=1){
+		// 	        for(let i=0; i<column; i+=1){
 			           
-			            for(let j=0; j<row; j+=1){
-			                let node = map[i][j];
+		// 	            for(let j=0; j<row; j+=1){
+		// 	                let node = map[i][j];
 			                
-			                if(node.done || node.cost < 0){
-			                    continue;
-			                }
+		// 	                if(node.done || node.cost < 0){
+		// 	                    continue;
+		// 	                }
 			                
-			                if(!process_node){
-			                    process_node = node;
-			                    index.i = i;
-			                    index.j = j;
-			                    continue;
-			                }
+		// 	                if(!process_node){
+		// 	                    process_node = node;
+		// 	                    index.i = i;
+		// 	                    index.j = j;
+		// 	                    continue;
+		// 	                }
 			                
-			                if(node.cost < process_node.cost){
-			                    process_node = node;
-			                    index.i = i;
-			                    index.j = j;
-			                }
+		// 	                if(node.cost < process_node.cost){
+		// 	                    process_node = node;
+		// 	                    index.i = i;
+		// 	                    index.j = j;
+		// 	                }
 			                
-			            }
-			        }
+		// 	            }
+		// 	        }
 			        
-			        if(!process_node){
-			            break;
-			        }
+		// 	        if(!process_node){
+		// 	            break;
+		// 	        }
 			        
-			        process_node.done = true;
+		// 	        process_node.done = true;
 			        
-			        for(let k = 0; k < 4; k += 1){
-			            let v = index.i;
-			            let h = index.j;
-			            switch(k){
-			              case 0:
-			                v -= 1;
-			                break;
-			              case 1:
-			                h += 1;
-			                break;
-			              case 2:
-			                v += 1;
-			                break;
-			              case 3:
-			                h -= 1;
-			                break;
-			            }
+		// 	        for(let k = 0; k < 4; k += 1){
+		// 	            let v = index.i;
+		// 	            let h = index.j;
+		// 	            switch(k){
+		// 	              case 0:
+		// 	                v -= 1;
+		// 	                break;
+		// 	              case 1:
+		// 	                h += 1;
+		// 	                break;
+		// 	              case 2:
+		// 	                v += 1;
+		// 	                break;
+		// 	              case 3:
+		// 	                h -= 1;
+		// 	                break;
+		// 	            }
 			            
-			            if(0 <= v && v < row && 0 <= h && h < column){
-			                let node = map[v][h];
-			                let cost = process_node.cost + map[v][h].edge;
+		// 	            if(0 <= v && v < row && 0 <= h && h < column){
+		// 	                let node = map[v][h];
+		// 	                let cost = process_node.cost + map[v][h].edge;
 			                
-			                if((node.cost < 0) || (node.cost > cost)){
-			                    node.cost = cost;
-			                    node.previous = {
-			                        v: index.i,
-			                        h: index.j
-			                    };
-			                }
-			            }
-			        }
-			    }
-				// let normalize = function (map) {
-				// 	let max_cost = 0;
-				// 	for(let i = 0; i < column; i += 1){
-				// 		for(let j = 0; j < row; j += 1){
-				// 			max_cost = Math.max(max_cost,map[i][j].cost);
-				// 		}
-				// 	}
-				// 	for(let i = 0; i < column; i += 1){
-				// 		for(let j = 0; j < row; j += 1){
-				// 			if(map[i][j] === -1){
-				// 				continue;
-				// 			}
-				// 			map[i][j].cost = Math.floor((map[i][j].cost / max_cost) * 100) / 100;
-				// 		}
-				// 	}
-				// 	return map;
-				// }
+		// 	                if((node.cost < 0) || (node.cost > cost)){
+		// 	                    node.cost = cost;
+		// 	                    node.previous = {
+		// 	                        v: index.i,
+		// 	                        h: index.j
+		// 	                    };
+		// 	                }
+		// 	            }
+		// 	        }
+		// 	    }
+		// 		// let normalize = function (map) {
+		// 		// 	let max_cost = 0;
+		// 		// 	for(let i = 0; i < column; i += 1){
+		// 		// 		for(let j = 0; j < row; j += 1){
+		// 		// 			max_cost = Math.max(max_cost,map[i][j].cost);
+		// 		// 		}
+		// 		// 	}
+		// 		// 	for(let i = 0; i < column; i += 1){
+		// 		// 		for(let j = 0; j < row; j += 1){
+		// 		// 			if(map[i][j] === -1){
+		// 		// 				continue;
+		// 		// 			}
+		// 		// 			map[i][j].cost = Math.floor((map[i][j].cost / max_cost) * 100) / 100;
+		// 		// 		}
+		// 		// 	}
+		// 		// 	return map;
+		// 		// }
 
-			    this.map = normalize(map);
-			}
+		// 	    this.map = normalize(map);
+		// 	}
 
-			dijkstra.call(this);
-			this.route(column,row);
-		}
-		route(column, row) {
-			let target_node = null;
-		    let v,h;
-		    this.commands = [];
-		    for(let i = 0; i < column; i+=1){
-		        for(let j = 0; j<row; j += 1){
-		            let node = this.map[i][j];
-		            if(!node.target){
-		                continue;
-		            };
-		            v = i;
-		            h = j;
-		        }
-		    }
+		// 	dijkstra.call(this);
+		// 	this.route(column,row);
+		// }
+		// route(column, row) {
+		// 	let target_node = null;
+		//     let v,h;
+		//     this.commands = [];
+		//     for(let i = 0; i < column; i+=1){
+		//         for(let j = 0; j<row; j += 1){
+		//             let node = this.map[i][j];
+		//             if(!node.target){
+		//                 continue;
+		//             };
+		//             v = i;
+		//             h = j;
+		//         }
+		//     }
 		    
-		    while(1){
-		        if(!this.map[v][h].previous){
-		            break;
-		        };
+		//     while(1){
+		//         if(!this.map[v][h].previous){
+		//             break;
+		//         };
 		        
-		        let previous_v = this.map[v][h].previous.v;
-		        let previous_h = this.map[v][h].previous.h;
+		//         let previous_v = this.map[v][h].previous.v;
+		//         let previous_h = this.map[v][h].previous.h;
 		        
-		        if(previous_v - v > 0){
-		            this.commands.unshift("up");
-		        }else if(previous_v - v < 0){
-		            this.commands.unshift("down");
-		        }else if(previous_h - h > 0){
-		            this.commands.unshift("left");
-		        }else if(previous_h - h < 0){
-		            this.commands.unshift("right");
-		        }
+		//         if(previous_v - v > 0){
+		//             this.commands.unshift("up");
+		//         }else if(previous_v - v < 0){
+		//             this.commands.unshift("down");
+		//         }else if(previous_h - h > 0){
+		//             this.commands.unshift("left");
+		//         }else if(previous_h - h < 0){
+		//             this.commands.unshift("right");
+		//         }
 		        
-		        v = previous_v;
-		        h = previous_h;
-		    }
-		}
-		detect_position(x, y) {
-			let vertical = Math.floor(y / 16);
-			let horizontal = Math.floor(x / 16);
-			return {v: vertical, h: horizontal};
-		}
+		//         v = previous_v;
+		//         h = previous_h;
+		//     }
+		// }
+		// detect_position(x, y) {
+		// 	let vertical = Math.floor(y / 16);
+		// 	let horizontal = Math.floor(x / 16);
+		// 	return {v: vertical, h: horizontal};
+		// }
 	}
 
 	Game.Enemy = class Enemy extends Game.EnemyManager{
@@ -1358,8 +1358,8 @@
 		        
 		        process_node.done = true;
 		        
-		        let yy = [0, -1, 1, 0];
-				let xx = [1, 0, 0, -1];
+		        let xx = [0, -1, 1, 0];
+				let yy = [1, 0, 0, -1];
 		        for(let k = 0; k < 4; k += 1){
 		            let y = index.i;
 		            let x = index.j;
@@ -1374,8 +1374,8 @@
 		                if((node.cost < 0) || (node.cost > cost)){
 		                    node.cost = cost;
 		                    node.previous = {
-		                        v: y,
-		                        h: x
+		                        y: y,
+		                        x: x
 		                    };
 		                }
 		            }
@@ -1393,14 +1393,59 @@
 					this.nodes[i][j].cost = Math.floor((this.nodes[i][j].cost / this.max_cost) * 100) / 100;
 				}
 			}
-			return map;
+			return this.nodes;
 		}
-		product_sum(target_nodes, factor){
+		product_sum(factor, target_nodes){
+			if(!target_nodes){
+				target_nodes = this.nodes
+			}
 			for(let i = 0; i < this.column; i += 1){
 				for(let j = 0; j < this.row; j += 1){
 					this.infruence_nodes[i][j] = this.infruence_nodes[i][j] + target_nodes[i][j].cost * factor;
 				}
 			}
+		}
+		generate_shortest_root() {
+			let target_node = null;
+		    let y;
+		    let x;
+		    let direction;
+
+		    for(let i = 0; i < this.column; i+=1){
+		        for(let j = 0; j < this.row; j += 1){
+		            let node = this.nodes[i][j];
+		            if(!node.target){
+		                continue;
+		            };
+		            y = i;
+		            x = j;
+		        }
+		    }
+
+		    while(1){
+		        if(!this.nodes[y][x].previous){
+		            break;
+		        };
+		        		        
+		        let xx = [0, 1, -1, 0];
+				let yy = [1, 0, 0, -1];
+
+				let previous_y = this.nodes[y][x].previous.y - y;
+				let previous_x = this.nodes[y][x].previous.x - x;
+
+				for(let i = 0; i < 4; i += 1) {
+					if(previous_y === yy[i] && previous_x === xx[i]){
+                        direction = i;
+                        break;
+                    }
+                }
+
+                this.shortest_root.unshift(direction);
+		        y = y + yy[direction];
+		        x = x + xx[direction];
+		    }
+
+		    return this.shortest_root;
 		}
 	}
 
@@ -1412,6 +1457,7 @@
 			this.column = core.h / 16;
 			this.row = core.w / 16;
 			this.max_cost = 0;
+			this.shortest_root = [];
 
 			for(let i = 0; i < this.column; i += 1){
 				this.nodes[i] = [];
