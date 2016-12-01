@@ -1381,27 +1381,26 @@
 		            }
 		        }
 		    }
-
 		    return this.nodes;
 		}
 		normalization(){
 			for(let i = 0; i < this.column; i += 1){
 				for(let j = 0; j < this.row; j += 1){
 					if(this.nodes[i][j] === -1){
-						continue;
+						this.nodes[i][j].cost = 0;
 					}
-					this.nodes[i][j].cost = Math.floor((this.nodes[i][j].cost / this.max_cost) * 100) / 100;
+					this.infruence_nodes[i][j] = Math.floor((this.nodes[i][j].cost / this.max_cost) * 100) / 100;
 				}
 			}
 			return this.nodes;
 		}
 		product_sum(factor, target_nodes){
-			if(!target_nodes){
+			if(!target_nodes || target_nodes === this.nodes){
 				target_nodes = this.nodes
 			}
 			for(let i = 0; i < this.column; i += 1){
 				for(let j = 0; j < this.row; j += 1){
-					this.infruence_nodes[i][j] = this.infruence_nodes[i][j] + target_nodes[i][j].cost * factor;
+					this.infruence_nodes[i][j] = this.infruence_nodes[i][j] + target_nodes[i][j] * factor;
 				}
 			}
 		}
@@ -1439,7 +1438,6 @@
                         break;
                     }
                 }
-
                 this.shortest_root.unshift(direction);
 		        y = y + yy[direction];
 		        x = x + xx[direction];
@@ -1469,14 +1467,16 @@
 			}
 
 			// 初期化
-			let sv = Math.floor(subject.x / 16);
-			let sh = Math.floor(subject.y / 16);
-			let tv = Math.floor(target.x / 16);
-			let th = Math.floor(target.y / 16);
-			this.nodes[sv][sh].cost = 0;
-			this.nodes[tv][th].target = true;
+			if(subject && target){
+				let sy = Math.floor(subject.y / 16);
+				let sx = Math.floor(subject.x / 16);
+				let ty = Math.floor(target.y / 16);
+				let tx = Math.floor(target.x / 16);
+				this.nodes[sy][sx].cost = 0;
+				this.nodes[ty][tx].target = true;
 
-			super.dijkstra();
+				super.dijkstra();
+			}
 		}
 	}
 

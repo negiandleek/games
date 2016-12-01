@@ -193,14 +193,16 @@ import "./game"
 						}
 					}
 				}
-				let hoge = null;
+
 				$.cpu.on("enter_frame", function(e) {
 					this.frame += 1;
-					if(this.frame === 1 || this.frame % 25 === 0){
+					if(this.frame === 1){
 						let num = Math.floor(1 / $.stage.enemys.length * 100) / 100;
-						this.infruence_map = new Game.InfruenceMap($.core, this, $.player)
+						this.infruence_map = new Game.InfruenceMap($.core)
+						this.infruence_map.normalization();
 						$.stage.enemys.map((enemy) => {
-							this.infruence_map.product_sum(num, enemy.infruence_map.nodes);
+							console.log(this.infruence_map.infruence_nodes);
+							this.infruence_map.product_sum(num, enemy.infruence_map.infruence_nodes);
 						})
 					}
 					$.cpu.move();
@@ -284,7 +286,7 @@ import "./game"
 				$.stage.on("appear_enemy", function (e) {
 					this.on("enter_frame", function () {
 						this.frame += 1;
-						if(this.frame === 1){
+						if(this.frame === 1 || this.frame % 25 === 0){
 							this.infruence_map = new Game.InfruenceMap($.core, this, $.player);
 							this.infruence_map.normalization();
 							this.infruence_map.generate_shortest_root();
