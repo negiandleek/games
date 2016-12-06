@@ -199,11 +199,10 @@ import "./game"
 					if(this.frame === 1){
 						let num = Math.floor(1 / $.stage.enemys.length * 100) / 100;
 						this.infruence_map = new Game.InfruenceMap($.core)
-						this.infruence_map.normalization();
 						$.stage.enemys.map((enemy) => {
-							console.log(this.infruence_map.infruence_nodes);
-							this.infruence_map.product_sum(num, enemy.infruence_map.infruence_nodes);
+							this.infruence_map.generate_threat_degrees(num, enemy.infruence_map.infruence_nodes);
 						})
+						// console.log(this.infruence_map.threat_nodes);
 					}
 					$.cpu.move();
 				})
@@ -216,13 +215,15 @@ import "./game"
 						}
 					}else{
 						let xx = [0, -1, 1, 0];
-						let yy = [1, 0, 0, -1];
+						let yy = [-1, 0, 0, 1];
 						let x = this.x / 16;
 						let y = this.y / 16;
-						let current = this.infruence_map.infruence_nodes[y][x];
+						let current = this.infruence_map.threat_nodes[y][x];
 						let direction = -1;
 						 for (let i = 0; i < 4; i+=1) {
-		                    if (current < this.infruence_map.infruence_nodes[y + yy[i]][x + xx[i]]) {
+
+		                    if (current > this.infruence_map.threat_nodes[y + yy[i]][x + xx[i]]) {
+		                        console.log(y + yy[i], x + xx[i]);
 		                        direction = i;
 		                        break;
 		                    }
@@ -258,12 +259,11 @@ import "./game"
 							let multi_y = $.player.sprite_h / field.sprite_h;
 							let diff_x = multi_x * field.sprite_w;
 							let diff_y = multi_y * field.sprite_h;
-							if(0 <= x && x < field.width - diff_x && 
-								0 <= y && y < field.height - diff_y &&
-								!field.is_hit(x, y, multi_x, multi_y)){
+							// if(0 <= x && x < field.width - diff_x && 
+							// 	0 <= y && y < field.height - diff_y){
 								this.is_moveing = true;
 								this.move();
-							}
+							// }
 						}
 					}
 				}
@@ -286,9 +286,9 @@ import "./game"
 				$.stage.on("appear_enemy", function (e) {
 					this.on("enter_frame", function () {
 						this.frame += 1;
-						if(this.frame === 1 || this.frame % 25 === 0){
+						if(this.frame === 1){
 							this.infruence_map = new Game.InfruenceMap($.core, this, $.player);
-							this.infruence_map.normalization();
+							this.infruence_map.normalization(true);
 							this.infruence_map.generate_shortest_root();
 						}
 						if(this.running){
@@ -302,7 +302,7 @@ import "./game"
 							if((this.x % 16 === 0) && (this.y % 16 === 0)){
 								this.is_moveing = false;
 								if($.player.is_intersect(this)){
-									$.core.stop();
+									// $.core.stop();
 									console.log("gameover!");
 									// $.core.store_game_state("gameover_menu");
 								};
@@ -360,7 +360,7 @@ import "./game"
 
 				$.stage.on("enter_frame", function (e) {
 					this.frame += 1;
-					if(this.frame === 1 || this.frame % 50 === 0){
+					if(this.frame === 1){
 						$.stage.appear_enemy($.game.view_pt.x + $.core.w, $.game.view_pt.y + $.core.h)
 					}
 				})
@@ -414,7 +414,7 @@ import "./game"
 		cpu.sprite_pos = cpu.generate_view_pt(["down", "left", "right", "up"])
 		cpu.direction = "up";
 		cpu.x = 160;
-		cpu.y = 160;
+		cpu.y = 320;
 		return cpu;
 	}
 

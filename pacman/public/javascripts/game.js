@@ -1383,24 +1383,29 @@
 		    }
 		    return this.nodes;
 		}
-		normalization(){
+		normalization(reverse){
 			for(let i = 0; i < this.column; i += 1){
 				for(let j = 0; j < this.row; j += 1){
 					if(this.nodes[i][j] === -1){
 						this.nodes[i][j].cost = 0;
 					}
 					this.infruence_nodes[i][j] = Math.floor((this.nodes[i][j].cost / this.max_cost) * 100) / 100;
+					if(reverse){
+						this.infruence_nodes[i][j] = Math.floor((1 - this.infruence_nodes[i][j]) * 100) / 100;
+					}
 				}
 			}
-			return this.nodes;
+			console.log(this.max_cost);
+			console.log(this.infruence_nodes);
+			return this.infruence_nodes;
 		}
-		product_sum(factor, target_nodes){
+		generate_threat_degrees(factor, target_nodes){
 			if(!target_nodes || target_nodes === this.nodes){
 				target_nodes = this.nodes
 			}
 			for(let i = 0; i < this.column; i += 1){
 				for(let j = 0; j < this.row; j += 1){
-					this.infruence_nodes[i][j] = this.infruence_nodes[i][j] + target_nodes[i][j] * factor;
+					this.threat_nodes[i][j] = this.threat_nodes[i][j] + target_nodes[i][j] * factor;
 				}
 			}
 		}
@@ -1452,6 +1457,7 @@
 			super();
 			this.nodes = [];
 			this.infruence_nodes = [];
+			this.threat_nodes = [];
 			this.column = core.h / 16;
 			this.row = core.w / 16;
 			this.max_cost = 0;
@@ -1460,9 +1466,11 @@
 			for(let i = 0; i < this.column; i += 1){
 				this.nodes[i] = [];
 				this.infruence_nodes[i] = [];
+				this.threat_nodes[i] = [];
 				for(let j = 0; j < this.row; j += 1){
 					this.nodes[i][j] = new Game.InfruenceMapNode();
 					this.infruence_nodes[i][j] = 0;
+					this.threat_nodes[i][j] = 0;
 				}
 			}
 
@@ -1476,6 +1484,7 @@
 				this.nodes[ty][tx].target = true;
 
 				super.dijkstra();
+				console.log(this.nodes);
 			}
 		}
 	}
