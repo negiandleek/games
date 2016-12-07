@@ -294,34 +294,6 @@
 		dom[next].setAttribute(atr, "currnet");
 	}
 
-	// Game.merge_instance = function() {
-	// 	let m = {};
-	// 	let args = arguments;
-	// 	for(let i = 0, len = args.length; i < len; i += 1){
-	// 		let t = {};
-	// 		let own = {}
-	// 		let class_name;
-	// 		if(!Game.is_dict(args[i])){
-	// 			throw new Error("TypeError: arguments is not object, Game.js");
-	// 			break;
-	// 		}
-	// 		// console.log(args[i]);
-	// 		for(let key in args[i]){
-	// 			if(args[i].hasOwnProperty(key)){
-	// 				if(key !== "__listners" && key !== "img"){
-	// 					t[key] = args[i][key];
-	// 				}
-	// 			}
-	// 		}
-	// 		class_name = args[0].constructor.name.toLowerCase();
-	// 		console.log(class_name);
-	// 		own[class_name] = [];
-	// 		own[class_name].push(t);
-	// 		m = Object.assign(m, own);
-	// 	}
-	// 	return m;
-	// }
-
 	Game.detect_diff = function (previous, now){
 		let r = [];
 
@@ -371,7 +343,6 @@
 	
 	// event type list
 	Game.Event.ENTER_FRAME = "enter_frame";
-	Game.Event.CHANGE_SCENE = "change_scene";
 	Game.Event.TOUCH_START = "touch_start";
 	Game.Event.TOUCH_MOVE = "touch_move";
 	Game.Event.TOUCH_END = "touch_end";
@@ -493,25 +464,15 @@
 			let canvas = this.canvas[0];
 			let ctx = this.context[0];
 			let gmo = this.game_object
-			// FIX: 差分計算
-			// let diff_key = this.constructor.diff_back(gmo.entity);
-			// let len = diff_key.length;
-			if(this.state === "playing"){
-				// for(let i = 0; i < len; i += 1){
-				let id = gmo.current_id;
-				let f =  gmo.entity.stage[id].field;
-				// if(diff_key[i] === "filed" && f){
-				let index = 0;
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-				for(let i = 0, len = f.csv.length; i < len; i += 1){
-					for(let j = 0, _len = f.csv[i].length; j < _len; j += 1){
-						render(f.img, f.img_pt[f.csv[i][j]], f.view_pt[index],16, 16);
-						index = index + 1;
-					}
+			let id = gmo.current_id;
+			let f =  gmo.entity.stage[id].field;
+			let index = 0;
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			for(let i = 0, len = f.csv.length; i < len; i += 1){
+				for(let j = 0, _len = f.csv[i].length; j < _len; j += 1){
+					render(f.img, f.img_pt[f.csv[i][j]], f.view_pt[index],16, 16);
+					index = index + 1;
 				}
-				// }
-				// }
 			}
 
 			function render(img, img_pt, view_pt, w, h) {
@@ -532,93 +493,51 @@
 			}
 		}
 		render_middle() {
-			// FIX: 差分計算
 			let canvas = this.canvas[1];
 			let ctx = this.context[1];
-			// let entity = this.game_object.entity
 			let gmo = this.game_object;
-			if(this.state === "playing"){
-				// let diff_key = this.constructor.diff_middle(entity);
-				// let len = diff_key.length;
-				// if(len !== 0){
-				// for(let i = 0; i < len; i += 1){
-				// if(diff_key[i] === "player" && entity.player){
-				
 				ctx.clearRect(0, 0, 512, 512);
 				
-				// playerに関する描画
-				let p = gmo.entity.player;
-				let a = [];
-				let b = [];
-				for(let i = 0, len = p.length; i < len; i += 1){
-					let childs = p[i].child;
-					a = [];
-					a[0] = p[i];
-					for(let j = 0, _len = childs.length; j < _len; j += 1){
-						a[j + 1] = childs[j];
-					}
-					b.push(a);
+			// playerに関する描画
+			let p = gmo.entity.player;
+			let a = [];
+			let b = [];
+			for(let i = 0, len = p.length; i < len; i += 1){
+				let childs = p[i].child;
+				a = [];
+				a[0] = p[i];
+				for(let j = 0, _len = childs.length; j < _len; j += 1){
+					a[j + 1] = childs[j];
 				}
+				b.push(a);
+			}
 
 
-				for(let i = 0, len = b.length; i < len; i += 1){
-					for(let j = 0, _len = b[i].length; j < _len; j += 1){
-						let tmp = b[i][j];
-						ctx.drawImage(tmp.img,
-							tmp.sprite_x,tmp.sprite_y, 
-							tmp.sprite_w,tmp.sprite_h, 
-							tmp.x, tmp.y,
-							tmp.sprite_w, tmp.sprite_h
-						);
-					}
+			for(let i = 0, len = b.length; i < len; i += 1){
+				for(let j = 0, _len = b[i].length; j < _len; j += 1){
+					let tmp = b[i][j];
+					ctx.drawImage(tmp.img,
+						tmp.sprite_x,tmp.sprite_y, 
+						tmp.sprite_w,tmp.sprite_h, 
+						tmp.x, tmp.y,
+						tmp.sprite_w, tmp.sprite_h
+					);
 				}
+			}
 
-				// player以外の描画
-				let id = gmo.current_id;
-				let s = gmo.entity.stage[id];
-				for(let i = 0, len = s.enemys.length; i < len; i += 1){
-					ctx.drawImage(s.enemys[i].type.img, 
-						s.enemys[i].tile_x, s.enemys[i].tile_y, s.enemys[i].tile_w, s.enemys[i].tile_h,
-						s.enemys[i].x, s.enemys[i].y, s.enemys[i].width, s.enemys[i].height);
-				}
-				// 			}
-				// 		}
-				// 	}
-				// }
+			// player以外の描画
+			let id = gmo.current_id;
+			let s = gmo.entity.stage[id];
+			for(let i = 0, len = s.enemys.length; i < len; i += 1){
+				ctx.drawImage(s.enemys[i].type.img, 
+					s.enemys[i].tile_x, s.enemys[i].tile_y, s.enemys[i].tile_w, s.enemys[i].tile_h,
+					s.enemys[i].x, s.enemys[i].y, s.enemys[i].width, s.enemys[i].height);
 			}
 		}
-		render_fore () {
+		render_fore (cb) {
 			let canvas = this.canvas[2];
 			let ctx = this.context[2];
-			// FIX:argsをGame.Game.progress_rateで管理する
-			let args = slice.call(arguments, 0);
-			if(this.state === "loading") {
-				let w = 200;
-				let h = 50;
-				let x = (canvas.width / 2) - (w / 2);
-				let y = (canvas.height / 2) - (h / 2);
-				
-				// 初期化
-				ctx.clearRect(x, y, w, h);
-				ctx.strokeStyle = "rgba(33,150,243,1)";
-				ctx.fillStyle = "rgba(33,150,243,1)";
-				
-				// 枠を描く
-				ctx.beginPath();
-				ctx.strokeRect(x, y, w, h);
-
-				// 進捗分だけ色を塗りつぶす
-				let pg_w = w * (args[0] / 100);
-				ctx.fillRect(x, y, pg_w, h);
-				
-				if(args[0] === 100){
-					this.store_game_state("playing");
-					this.render_fore()
-				}
-
-			}else if(this.state === "playing") {
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
-			}
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
 		}
 	}
 
@@ -633,7 +552,6 @@
 			this.animation = null;
 			this.game_object = [];
 			this.scene_object = [];
-			this.state = "init";
 			this.last_touch_target
 			this.running = false;
 			this.elapsed_time = 0;
@@ -647,10 +565,6 @@
 			}
 
 			return Game.Core.instance;
-
-			// document.addEventListener(Game.sprt.TOUCH_START, (e) => {
-			// 	this.last_touch_target = e.target;
-			// })
 		}
 		setup() {
 			let events = Object.assign({},Game.sprt.game_events);
@@ -712,45 +626,13 @@
 				}
 			}
 		}
-		// FIX:削除
-		// init, title_menu,loading, paly, gameover, continue_menu, setting
-		store_game_state(type) {
-			// coreのstateが変わったらchange_sceneイベントを発行する
-			if(Game.is_str(type) && this.state !== type){
-				this.state = type;
-				let e = new Game.Event("change_scene");
-				let things = this.game_object;
-				// let scenes = this.scene_object;
-
-				this.dispatch_event(e);
-
-				for(let i = 0, len = things.length; i < len; i += 1){
-					things[i].dispatch_event(e);
-					// this.next_frame(things[i]);
-				}
-				// for(let i = 0, len = scenes.length; i < len; i += 1){
-				// 	scenes[i].dispatch_event(e);
-				// 	// this.next_fore_frame(scenes[i]);
-				// }
-			
-				if(type === "playing"){
-					this.running = true;
-				}else{
-					this.running = false;
-				}
-			}
-		}
-		fetch_state() {
-			return this.state;
-		}
-		init() {
-			this.state = this.store_game_state("init");
-			this.frame = 0;
-			this.last = new Date().getTime;
-			this.game_object = null;
-			this.scene_object = [];
-			super.init();
-		}
+		// init() {
+		// 	this.frame = 0;
+		// 	this.last = new Date().getTime;
+		// 	this.game_object = null;
+		// 	this.scene_object = [];
+		// 	super.init();
+		// }
 		start() {
 			let now = Game.now();
 			let diff = now - this.last;
@@ -783,7 +665,7 @@
 			}
 		}
 		push_out_scene(dict){
-			if(Game.is_dict(dict) && dict instanceof Game.OutScene){
+			if(Game.is_dict(dict)){
 				if(this.current_out_scene){
 					this.current_out_scene.dispatch_event(new Game.Event("exit"));
 				}
@@ -823,7 +705,6 @@
 			let entity = this.game_object.entity;
 			let id = this.game_object.current_id;
 			this.frame = this.frame + 1;
-
 			entity.stage[id].dispatch_event(e);
 
 			let enemys = entity.stage[id].enemys;
@@ -918,9 +799,6 @@
 	}
 
 	// ゲームが使用する全体のオブジェクトを管理する
-	// 例えばセーブデータ1
-	// TODO:preload, load, progress追加する
-	// TODO: Game.Game -> Game.Manager
 	Game.Game = class extends Game.EventTarget{
 		constructor(x, y){
 			super()
@@ -928,25 +806,15 @@
 				x: x || 0,
 				y: y || 0
 			};
-			// this.filed_id -> current_stage_id;
 			this.filed_id = 0;
 			this.current_id = 0;
 			this.source = [];
+			// entity.stageオブジェクト一つで現在のゲームのオブジェクトを管理する
+			// stage:1-2, dungeon:目覚めの森
 			this.entity = {
-				player: [],
-				// stage: {
-				// 	1:[filed: , enemy, enemy, enemy, item, item],
-				// 	2:[],
-				// }
-				stage: {},
-				// fieldオブジェクト一つで現在のゲームのオブジェクトを管理する
-				// stage:1-2, dungeon:目覚めの森
-				// square_idでフィールドと結びつけた(rpgにおける敵、ツボのなかのアイテムなどの)オブジェクトは画面上から隠す
-				// もしくは(npc, enemyなどの)idを持っているオブジェクトは画面上に表示する
-				filed: [],
-				enemy: [],
-				// sceneは保留
 				scene: [],
+				player: [],
+				stage: {},
 			}
 			this.enemy_type = Game.EnemyTypeManage;
 			this.root_game_scene = document.getElementById("ui");
@@ -957,7 +825,7 @@
 		hide_ui(){
 			this.root_game_scene.style.display = "none";
 		}
-		// 現在のゲームが管理するものを追加する
+		// ゲームが管理するものを追加する
 		// プレイヤーはステージに影響を受けないので独立させる
 		add_player(dict) {
 			if(Game.is_dict(dict)){
@@ -989,20 +857,6 @@
 			this.current_id = id;
 			return this.entity.stage[id];
 		}
-		// add_filed(dict) {
-		// 	if(Game.is_dict(dict)){
-		// 		if(dict instanceof Game.Filed){
-		// 			this.entity.stage[this.current_id].filed = dict;
-		// 		}
-		// 	}
-		// }
-		// add_enemy(dict){
-		// 	if(Game.is_dict(dict)){
-		// 		if(dict instanceof Game.Enemy){
-		// 			this.entity.stage[this.current_id].enemys.push(dict);
-		// 		}
-		// 	}
-		// }
 		add_scene(dict){
 			if(Game.is_dict(dict)){
 				if(dict instanceof Game.InScene){
@@ -1136,158 +990,6 @@
 		disappear_enemy() {
 
 		}
-		// generate_effect_map(map_w, map_h, target_x, target_y) {
-		// 	let map = [];
-		// 	let column = map_h / 16;
-		// 	let row = map_w / 16;
-		// 	for(let i = 0; i < column; i += 1){
-		// 		map[i] = [];
-		// 		for(let j = 0; j < row; j += 1){
-		// 			map[i][j] = new Game.EffectMap();
-		// 		}
-		// 	}
-
-		// 	let subject = this.detect_position(this.x, this.y);
-		// 	let target = this.detect_position(target_x, target_y);
-
-		// 	// 初期化
-		// 	map[subject.v][subject.h].cost = 0;
-		// 	map[target.v][target.h].target = true;
-
-		// 	let dijkstra = function () {
-		// 	    while(true){
-		// 	        let process_node = null;
-		// 	        let index = {i: 0, j: 0};
-			       
-		// 	        for(let i=0; i<column; i+=1){
-			           
-		// 	            for(let j=0; j<row; j+=1){
-		// 	                let node = map[i][j];
-			                
-		// 	                if(node.done || node.cost < 0){
-		// 	                    continue;
-		// 	                }
-			                
-		// 	                if(!process_node){
-		// 	                    process_node = node;
-		// 	                    index.i = i;
-		// 	                    index.j = j;
-		// 	                    continue;
-		// 	                }
-			                
-		// 	                if(node.cost < process_node.cost){
-		// 	                    process_node = node;
-		// 	                    index.i = i;
-		// 	                    index.j = j;
-		// 	                }
-			                
-		// 	            }
-		// 	        }
-			        
-		// 	        if(!process_node){
-		// 	            break;
-		// 	        }
-			        
-		// 	        process_node.done = true;
-			        
-		// 	        for(let k = 0; k < 4; k += 1){
-		// 	            let v = index.i;
-		// 	            let h = index.j;
-		// 	            switch(k){
-		// 	              case 0:
-		// 	                v -= 1;
-		// 	                break;
-		// 	              case 1:
-		// 	                h += 1;
-		// 	                break;
-		// 	              case 2:
-		// 	                v += 1;
-		// 	                break;
-		// 	              case 3:
-		// 	                h -= 1;
-		// 	                break;
-		// 	            }
-			            
-		// 	            if(0 <= v && v < row && 0 <= h && h < column){
-		// 	                let node = map[v][h];
-		// 	                let cost = process_node.cost + map[v][h].edge;
-			                
-		// 	                if((node.cost < 0) || (node.cost > cost)){
-		// 	                    node.cost = cost;
-		// 	                    node.previous = {
-		// 	                        v: index.i,
-		// 	                        h: index.j
-		// 	                    };
-		// 	                }
-		// 	            }
-		// 	        }
-		// 	    }
-		// 		// let normalize = function (map) {
-		// 		// 	let max_cost = 0;
-		// 		// 	for(let i = 0; i < column; i += 1){
-		// 		// 		for(let j = 0; j < row; j += 1){
-		// 		// 			max_cost = Math.max(max_cost,map[i][j].cost);
-		// 		// 		}
-		// 		// 	}
-		// 		// 	for(let i = 0; i < column; i += 1){
-		// 		// 		for(let j = 0; j < row; j += 1){
-		// 		// 			if(map[i][j] === -1){
-		// 		// 				continue;
-		// 		// 			}
-		// 		// 			map[i][j].cost = Math.floor((map[i][j].cost / max_cost) * 100) / 100;
-		// 		// 		}
-		// 		// 	}
-		// 		// 	return map;
-		// 		// }
-
-		// 	    this.map = normalize(map);
-		// 	}
-
-		// 	dijkstra.call(this);
-		// 	this.route(column,row);
-		// }
-		// route(column, row) {
-		// 	let target_node = null;
-		//     let v,h;
-		//     this.commands = [];
-		//     for(let i = 0; i < column; i+=1){
-		//         for(let j = 0; j<row; j += 1){
-		//             let node = this.map[i][j];
-		//             if(!node.target){
-		//                 continue;
-		//             };
-		//             v = i;
-		//             h = j;
-		//         }
-		//     }
-		    
-		//     while(1){
-		//         if(!this.map[v][h].previous){
-		//             break;
-		//         };
-		        
-		//         let previous_v = this.map[v][h].previous.v;
-		//         let previous_h = this.map[v][h].previous.h;
-		        
-		//         if(previous_v - v > 0){
-		//             this.commands.unshift("up");
-		//         }else if(previous_v - v < 0){
-		//             this.commands.unshift("down");
-		//         }else if(previous_h - h > 0){
-		//             this.commands.unshift("left");
-		//         }else if(previous_h - h < 0){
-		//             this.commands.unshift("right");
-		//         }
-		        
-		//         v = previous_v;
-		//         h = previous_h;
-		//     }
-		// }
-		// detect_position(x, y) {
-		// 	let vertical = Math.floor(y / 16);
-		// 	let horizontal = Math.floor(x / 16);
-		// 	return {v: vertical, h: horizontal};
-		// }
 	}
 
 	Game.Enemy = class Enemy extends Game.EnemyManager{
@@ -1317,7 +1019,6 @@
 		}
 	}
 
-	// Game.stageにおく？
 	Game.InfruenceMapManger = class InfruenceMapManger extends Game.EventTarget{
 		constructor(){
 			super();
@@ -1395,8 +1096,6 @@
 					}
 				}
 			}
-			console.log(this.max_cost);
-			console.log(this.infruence_nodes);
 			return this.infruence_nodes;
 		}
 		generate_threat_degrees(factor, target_nodes){
@@ -1484,7 +1183,6 @@
 				this.nodes[ty][tx].target = true;
 
 				super.dijkstra();
-				console.log(this.nodes);
 			}
 		}
 	}
@@ -1573,7 +1271,6 @@
 			// enemyのクラスを管理
 			if(!this.enemy_manager){
 				this.enemy_manager = new Game.EnemyManager(this.field, this);
-				// this.enemys = this.enemy_manager.enemys;
 			}
 		}
 		appear_enemy(range_x, range_y){
@@ -1600,11 +1297,7 @@
 			this.sprite_w = sw || 16;
 			this.sprite_h = sh || 16;
 			this.collision;
-			// enemyのクラスを管理
-			// this.enemy_manager = new Game.EnemyManager(this);
-			// this.enemys = this.enemy_manager.enemys;
 		}
-		// 対象の[x,y]とfiledを元に対象の大きさ[multi_x, multi_y]
 		is_hit(x, y, multi_x, multi_y){
 			let pos_list = [];
 			// マス目左上(m * tile_w,  n* tile_h)に合わせる
@@ -1634,8 +1327,6 @@
 	Game.Player = class Player extends Game.EventTarget{ 
 		constructor(w, h) {
 			super();
-			// スプライトを変更する時などに用いる
-			this.change = false;
 			this.img;
 			this.life;
 			this.x = 16;
@@ -1647,13 +1338,6 @@
 			this.sprite_y = 0;
 			this.child = [];
 			this.frame = 0;
-			// if(constant == null || constant == "single"){
-			// 	this.sprite_type = "single";
-			// }else if(constant === "multiple"){
-			// 	this.sprite_type = constant;
-			// }else{
-			// 	throw new Error("TypeError: constant is not type");
-			// }
 		}
 		move_by(x, y) {
 			this.x = this.x + x;
@@ -1685,7 +1369,7 @@
 				}
 			}
 		}
-		// なくても問題ない
+		// FIX:削除
 		generate_view_pt(_direction){
 			// {up: [{x: 16, y: 32},{x: 32, y: 48}],{down: }
 			let view_pt = {
@@ -1717,7 +1401,6 @@
 			}
 		}
 	}
-
 
 	Game.Item = class Item extends Game.EventTarget{
 		constructor(width, height) {
