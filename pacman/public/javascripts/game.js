@@ -414,15 +414,14 @@
 			this.canvas = [];
 			this.context = [];
 			this.root_node;
-			this.cache_middle;
 			this.cache_back;
+			this.cache_middle;
+			this.cache_fore;
 		}
 		init(){
-			this.w = w;
-			this.h = h;
-			this.canvas = [];
-			this.context = [];
-			this.root_node;
+			this.cache_back;
+			this.cache_middle;
+			this.cache_fore;
 		}
 		store_dom() {
 			let root_node = this.root_node = document.getElementById("interface");
@@ -551,8 +550,6 @@
 			this.delayed = 0;
 			this.animation = null;
 			this.game_object = [];
-			this.scene_object = [];
-			this.last_touch_target
 			this.running = false;
 			this.elapsed_time = 0;
 
@@ -626,13 +623,17 @@
 				}
 			}
 		}
-		// init() {
-		// 	this.frame = 0;
-		// 	this.last = new Date().getTime;
-		// 	this.game_object = null;
-		// 	this.scene_object = [];
-		// 	super.init();
-		// }
+		init(){
+			this.frame = 0;
+			this.previous = [];
+			this.last = 0;
+			this.fps = 1000 / 60;
+			this.delayed = 0;
+			this.animation = null;
+			this.running = false;
+			this.elapsed_time = 0;
+			this.game_object = [];
+		}
 		start() {
 			let now = Game.now();
 			let diff = now - this.last;
@@ -653,11 +654,19 @@
 		stop() {
 			cansel_animation_frame(this.animation);
 			this.running = false;
+			this.input = null;
 		}
 		rewind() {
 			this.frame = 0;
-			this.last = Game.now();
-			this.start();
+			this.previous = [];
+			this.last = 0;
+			this.fps = 1000 / 60;
+			this.delayed = 0;
+			this.animation = null;
+			this.running = false;
+			this.elapsed_time = 0;
+			let id = this.game_object.current_id;
+			delete this.game_object.entity.stage[id];
 		}
 		add_game(obj) {
 			if(Game.is_dict(obj) && obj !== this.game_object){
@@ -674,21 +683,27 @@
 				return this.out_scenes.push(dict);
 			}
 		}
-		pop_out_scene() {
-			if(!this.current_out_scene){
+		pop_out_scene(bool = true, scene) {
+			if(!this.current_out_scene || this.current_out_scene.length < 1){
 				return this.current_out_scene;
 			}
+
+			if(!scene){
+				scene = this.current_out_scene;
+			}
+
 			this.current_out_scene.dispatch_event(new Game.Event("exit"));
-			this.remove_out_scene(this.current_out_scene);
-			this.current_out_scene = this.out_scenes[this.out_scenes.length - 1];
-			if(this.current_out_scene){
-				this.current_out_scene.dispatch_event(new Game.Event("enter"));
+			this.current_out_scene = this.out_scenes[this.out_scenes.length - 2];
+			this.current_out_scene.dispatch_event(new Game.Event("enter"));
+
+			if(bool){
+				this.remove_out_scene(scene);
 			}
 		}
 		remove_out_scene(dict){
-			if(Game.is_dict(dict) && dict instanceof Game.OutScene){
-				if(this.currnet_out_scene === dict){
-					return this.current_out_scene;
+			if(Game.is_dict(dict)){
+				if(this.current_out_scene === dict){
+					this.pop_out_scene(true, dict);
 				}else{
 					let i = this.out_scenes.indexOf(dict);
 					if(i !== -1){
@@ -703,27 +718,23 @@
 		main(time){
 			let e = new Game.Event("enter_frame");
 			let entity = this.game_object.entity;
-			let id = this.game_object.current_id;
 			this.frame = this.frame + 1;
-			entity.stage[id].dispatch_event(e);
 
-			let enemys = entity.stage[id].enemys;
-			for(let i = 0, len = enemys.length; i < len; i += 1){
-				enemys[i].dispatch_event(e);
-				this.next_frame();
-			}
+			for(let key in entity){
+				if(key === "stage"){
+					let id = this.game_object.current_id;
+					let stage = entity[key][id];
+					entity[key][id].dispatch_event(e);
 
-			let field = entity.stage[id].field;
-			field.dispatch_event(e);
-			this.next_frame();
-
-			for(let i = 0, len = entity.player.length; i < len; i += 1){
-				let player = entity.player[i];
-				player.dispatch_event(e);
-				for(let j = 0, _len = player.child.length; j < _len; j += 1){
-					if(_len){
-						// FIX
-						player.child[j].dispatch_event(e);
+					for(let _key in stage){
+						for(let i = 0, len = stage[_key].length; i < len; i += 1){
+							stage[_key][i].dispatch_event(e);
+							this.next_frame();
+						}
+					}
+				}else{
+					for(let i = 0, len = entity[key].length; i < len; i += 1){
+						entity[key][i].dispatch_event(e);
 					}
 				}
 			}
@@ -731,6 +742,7 @@
 			if(!this.running){
 				return false;
 			}
+
 			this.elapsed_time = Game.now() - this.last;
 			this.animation = request_animation_frame(this.main.bind(this));
 		}
@@ -806,7 +818,6 @@
 				x: x || 0,
 				y: y || 0
 			};
-			this.filed_id = 0;
 			this.current_id = 0;
 			this.source = [];
 			// entity.stageオブジェクト一つで現在のゲームのオブジェクトを管理する
@@ -824,6 +835,46 @@
 		}
 		hide_ui(){
 			this.root_game_scene.style.display = "none";
+		}
+		validate(type) {
+			if(type === "player"){
+				if(arguments.length > 1){
+					let args = slice.call(arguments, 1, arguments.length);
+					let indexes = [];
+					
+					args.map((proparty, i)=>{
+						indexes[i] = this.entity.player.indexOf(proparty) === -1 ? false: true;
+					})
+
+					indexes = indexes.length === 1? indexes[0]: indexes;
+
+					return indexes;
+				}else{
+					let index = this.entity.player.length;
+					if(index > 0){
+						index = 1;
+					}
+					return !!index;
+				}
+			}else if(type === "scene"){
+				if(!arguments[1]){
+					return false;
+				}
+
+				let args = slice.call(arguments, 0, arguments.length);
+				let indexes = [];
+
+				args.map((proparty, i)=>{
+					indexes[i] = this.entity.player.indexOf(proparty) === -1 ? false: true;
+				})
+
+				indexes = indexes.length === 1? indexes[0]: indexes;
+
+				return indexes;
+
+			}else{
+				throw new Error("Invalid Error, Game.js");
+			}
 		}
 		// ゲームが管理するものを追加する
 		// プレイヤーはステージに影響を受けないので独立させる
@@ -859,9 +910,7 @@
 		}
 		add_scene(dict){
 			if(Game.is_dict(dict)){
-				if(dict instanceof Game.InScene){
-					this.entity.scene.push(dict);
-				}
+				this.entity.scene.push(dict);
 			}
 		}
 		static loaded_progress(wait, len) {
@@ -1064,11 +1113,16 @@
 		        for(let k = 0; k < 4; k += 1){
 		            let y = index.i;
 		            let x = index.j;
+		            let _y = y + yy[k];
+		            let _x = x + xx[k];
 		            
-		            if(0 <= y + yy[k] && y + yy[k] < this.row &&
-		            	0 <= x + xx[k] && x + xx[k] < this.column){
-		                let node = this.nodes[y + yy[k]][x + xx[k]]
-		                let cost = process_node.cost + this.nodes[y + yy[k]][x + xx[k]].edge;
+		           this.field.is_hit(_x * this.field.sprite_w, _y * this.field.sprite_h)
+		            
+		            if(0 <= _y && _y < this.row &&
+	            	0 <= _x && _x < this.column &&
+	            	!this.field.is_hit(_x * this.field.sprite_w, _y * this.field.sprite_h)){
+		               	let node = this.nodes[_y][_x]
+		                let cost = process_node.cost + this.nodes[_y][_x].edge;
 		                
 		                this.max_cost = Math.max(this.max_cost, cost);
 
@@ -1152,15 +1206,16 @@
 	}
 
 	Game.InfruenceMap = class InfruenceMap extends Game.InfruenceMapManger{
-		constructor(core, subject, target){
+		constructor(core, field, subject, target){
 			super();
 			this.nodes = [];
 			this.infruence_nodes = [];
 			this.threat_nodes = [];
-			this.column = core.h / 16;
-			this.row = core.w / 16;
+			this.column = (core.h - 16) / 16;
+			this.row = (core.w - 16) / 16;
 			this.max_cost = 0;
 			this.shortest_root = [];
+			this.field = field;
 
 			for(let i = 0; i < this.column; i += 1){
 				this.nodes[i] = [];
@@ -1298,11 +1353,17 @@
 			this.sprite_h = sh || 16;
 			this.collision;
 		}
-		is_hit(x, y, multi_x, multi_y){
+		is_hit(x, y, multi_x, multi_y, bool){
 			let pos_list = [];
 			// マス目左上(m * tile_w,  n* tile_h)に合わせる
-			let position_x = Math.floor(x / this.sprite_w) * this.sprite_w;
-			let position_y = Math.floor(y / this.sprite_h) * this.sprite_h;
+			let position_x;
+			let position_y;
+			position_x = Math.floor(x / this.sprite_w) * this.sprite_w;
+			position_y = Math.floor(y / this.sprite_h) * this.sprite_h;
+			
+			multi_x = multi_x == null? 1: multi_x;
+			multi_y = multi_y == null? 1: multi_y;
+
 			// field csv の2次元配列のインデックスを計算
 			for(let i = 0; i < multi_y; i += 1){
 				for(let j = 0; j < multi_x; j += 1){
@@ -1343,9 +1404,16 @@
 			this.x = this.x + x;
 			this.y = this.y + y
 		}
-		is_intersect(target){			
-			if(Math.abs(this.x - target.x) < this.sprite_w / 2 + target.tile_w 
-				&&  Math.abs(this.y - target.y) < this.sprite_h / 2 + target.tile_h){
+		is_intersect(target){
+			let collections = target.type.collections;
+			let diff_x = (this.x + this.sprite_w / 2) - (target.x + target.tile_w / 2);
+			let diff_y = (this.y + this.sprite_h / 2) - (target.y + target.tile_h / 2);
+			
+			let distance_x = target.tile_w / 2 - collections.margin_x;
+			let distance_y = target.tile_h / 2 - collections.margin_y;
+			
+			if(Math.abs(diff_x) < this.sprite_w / 2 + distance_x
+			&&  Math.abs(diff_y) < this.sprite_h / 2 + distance_y){
 				return true;
 			}else{
 				return false;
